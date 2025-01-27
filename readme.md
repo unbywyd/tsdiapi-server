@@ -1,111 +1,108 @@
-# TSDIAPI-Server: A Modular TypeScript API Framework
+# TSDIAPI: Modular TypeScript API Framework
 
-TSDIAPI-Server is a scalable and modular API framework built with TypeScript, Express, and TypeDI. It is designed to provide flexibility and structure for modern backend applications, enabling easy integration of plugins for extended functionality.
+TSDIAPI is a modern, scalable, and modular framework for building APIs using TypeScript, Express, and TypeDI. It simplifies backend development with built-in support for dependency injection, structured routing, and plugin-based extensibility.
 
 ---
 
 ## Key Features
 
-- **Dependency Injection (DI):** Built-in support for `TypeDI` ensures a clean and maintainable architecture with dependency injection for controllers, services, and more.
-- **Modular Plugin System:** Extend the framework with plugins like `tsdiapi-io` for WebSocket integration or `tsdiapi-cron` for task scheduling.
-- **Routing Controllers:** Simplify route definitions with `routing-controllers` for declarative and structured REST API development.
-- **Class Validation and Transformation:** Leverage `class-validator` and `class-transformer` for schema validation and data conversion.
-- **Swagger Documentation:** Automatically generate OpenAPI-compliant API documentation.
-- **Environment Configuration:** Fully configurable via `dotenv` and flexible config files.
-- **Middleware and Security:** Built-in support for middleware like `helmet`, `morgan`, and CORS.
-
----
-
-## Architecture Overview
-
-1. **Dependency Injection (DI):**
-
-   - All controllers, services, and middleware are managed via `TypeDI`, allowing for easy testing and loose coupling.
-
-2. **Plugins:**
-
-   - Plugins can hook into the framework lifecycle (`onInit`, `beforeStart`, `afterStart`) and provide additional functionality like:
-     - WebSocket integration (`tsdiapi-io`)
-     - Cron job management (`tsdiapi-cron`)
-
-3. **Separation of Concerns:**
-
-   - Controllers handle routing and HTTP requests.
-   - Services encapsulate business logic.
-   - Plugins extend the functionality (e.g., WebSockets, cron jobs).
-
-4. **Scalable Structure:**
-   - Separate directories for controllers, services, and plugins.
-   - Dynamic loading of controllers, services, and middlewares using glob patterns.
+- **Dependency Injection (DI):** Powered by `TypeDI`, ensuring clean and testable architecture.
+- **Modular Plugin System:** Extend core functionality with plugins like `tsdiapi-io` (WebSocket) and `tsdiapi-cron` (task scheduling).
+- **Routing Simplified:** Declarative route handling using `routing-controllers`.
+- **Validation & Transformation:** Leverage `class-validator` and `class-transformer` for data validation and conversion.
+- **OpenAPI Documentation:** Auto-generate API docs with Swagger support.
+- **Middleware Support:** Preconfigured `helmet`, `morgan`, and CORS for security and logging.
+- **Environment Configuration:** Fully configurable via `.env` files and dynamic config management.
 
 ---
 
 ## Getting Started
 
-1. **Install Core Dependencies:**
+### Installation
+
+1. **Initialize a New Project:**
+   Use the `tsdiapi-cli` tool to create and set up a new project:
 
    ```bash
-   npm install tsdiapi-server
+   npx tsdiapi init
    ```
 
-2. **Add Plugins as Needed:**
-   For WebSocket or Cron support, install and configure the corresponding plugins:
 
-   - `tsdiapi-io`
-   - `tsdiapi-cron`
+## How It Works
 
-3. **Create Your Application:**
-   Use the `createApp` function to initialize the server and register plugins.
+### Core Architecture
 
-   ```typescript
-   import { createApp } from "./app";
+1. **Dependency Injection (DI):**
+   All controllers, services, and middleware are registered via `TypeDI`.
 
-   createApp({
-     plugins: [
-       // Add plugins here
-     ],
-   });
-   ```
+2. **Plugins:**
+   Add plugins to extend functionality. Plugins integrate seamlessly into the application lifecycle (e.g., initialization, pre-start, post-start).
+
+3. **Scalable Structure:**
+   Projects are organized into distinct directories for features, controllers, services, and plugins.
 
 ---
 
-## Extending Functionality
+## Example Setup
+
+### Basic Server Setup
+
+```typescript
+import { createApp } from "tsdiapi-server";
+
+createApp({
+  plugins: [
+    // Add your plugins here
+  ],
+});
+```
+
+### Plugin Example: WebSockets
+
+Install the `tsdiapi-io` plugin for WebSocket support:
+
+```bash
+npm install tsdiapi-io
+```
+
+Then, integrate it into your server:
+
+```typescript
+import { createApp } from "tsdiapi";
+import ioPlugin from "tsdiapi-io";
+
+createApp({
+  plugins: [
+    ioPlugin()
+  ],
+});
+```
+
+---
+
+## Features Overview
 
 ### Plugins
 
-Add plugins to support additional features like:
-
-- **WebSockets:** Use `tsdiapi-io` for WebSocket support with `Socket.IO`.
-- **Task Scheduling:** Use `tsdiapi-cron` to define and manage cron jobs.
+- **WebSockets:** Real-time communication using `tsdiapi-io`.
+- **Task Scheduling:** Manage cron jobs with `tsdiapi-cron`.
+- **Prisma Integration:** Seamlessly connect to a Prisma database with `tsdiapi-prisma`.
 
 ### Lifecycle Hooks
 
-Plugins can hook into the following lifecycle stages:
+Plugins can hook into these lifecycle stages:
 
-- `onInit`: Called during the initialization phase.
-- `beforeStart`: Called before the server starts.
-- `afterStart`: Called after the server starts and begins listening for requests.
+- `onInit`: Perform setup tasks.
+- `beforeStart`: Configure or validate before the server starts.
+- `afterStart`: Execute tasks after the server begins listening.
 
----
+### Controllers & Services
 
-## Example Plugins
-
-1. **WebSocket Plugin (`tsdiapi-io`):** Adds WebSocket support.
-2. **Cron Plugin (`tsdiapi-cron`):** Manages scheduled tasks.
-
----
-
-## Core Components
-
-1. **Controllers:**
-   Define routes and their handlers using `routing-controllers`.
-2. **Services:**
-   Encapsulate reusable business logic with DI via `TypeDI`.
-3. **Plugins:**
-   Extend the framework with additional features (e.g., WebSocket, Cron).
+- Use `routing-controllers` for declarative route handling.
+- Manage business logic with DI-based services.
 
 ---
 
 ## Summary
 
-TSDIAPI-Server provides a flexible foundation for building modern APIs with modularity and extensibility at its core. Use it to create scalable, well-structured applications with minimal configuration and maximum control.
+TSDIAPI offers a clean, modular foundation for building modern APIs. It reduces boilerplate, promotes scalability, and simplifies integration with tools like WebSockets, task schedulers, and more. Build better APIs with less effort!
