@@ -21,13 +21,14 @@ import swaggerOptions from './config/swagger.config';
 import { createLogger, logger } from './modules/logger';
 import { loadMorganModule } from './modules/morgan';
 import { loadHelmetModule } from './modules/helmet';
-import { createServer } from 'http'
+import { createServer, Server } from 'http'
 import * as swaggerUiExpress from 'swagger-ui-express'
 import fileLoader from './modules/file-loader'
 import { AsyncResolver } from 'routing-controllers-openapi-extra';
 import Container from 'typedi';
 import { AppContext, AppOptions, AppPlugin, CreateAppOptions } from './types';
 import helmetOptions from './config/helmet.config';
+import chalk from 'chalk';
 export * from './types';
 
 const appDefaultOptions: AppOptions = {
@@ -155,7 +156,7 @@ export async function createApp(options?: CreateAppOptions) {
             ],
         });
         await AsyncResolver.resolveAll();
-        const server = createServer(app);
+        const server: Server = createServer(app);
 
         context.server = server;
 
@@ -245,11 +246,29 @@ export async function createApp(options?: CreateAppOptions) {
             server.on("error", (err: any) => {
                 logger.error(err);
             });
+
+            process.on("SIGINT", () => gracefulShutdown(server));
+            process.on("SIGTERM", () => gracefulShutdown(server));
         });
 
     } catch (error) {
         console.error(error);
     }
 }
+
+const gracefulShutdown = (server: Server) => {
+    console.log(chalk.blue("\n👋 Bye-bye! See you soon!"));
+    server.close(() => {
+        console.log(chalk.red("💥 Server has been shut down gracefully."));
+        process.exit(0);
+    });
+
+    setTimeout(() => {
+        console.error(chalk.red("⏳ Forced shutdown due to timeout."));
+        process.exit(1);
+    }, 5000);
+};
+
+
 
 export { AppConfig, AppDir, environment, getConfig, logger, Container };

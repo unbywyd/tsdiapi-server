@@ -78,18 +78,27 @@ const file_loader_1 = __importDefault(require("./modules/file-loader"));
 const routing_controllers_openapi_extra_1 = require("routing-controllers-openapi-extra");
 const typedi_1 = __importDefault(require("typedi"));
 exports.Container = typedi_1.default;
+const helmet_config_1 = __importDefault(require("./config/helmet.config"));
+const chalk_1 = __importDefault(require("chalk"));
 __exportStar(require("./types"), exports);
 const appDefaultOptions = {
     appConfig: app_1.AppConfig,
     environment: app_1.environment,
     corsOptions: cors_config_1.default,
     swaggerOptions: swagger_config_1.default,
+    helmetOptions: helmet_config_1.default,
+    expressStaticOptions: {
+        maxAge: 31557600000,
+    },
 };
 function createApp(options) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
         try {
             const appOptions = typeof (options === null || options === void 0 ? void 0 : options.config) === 'function' ? options.config(appDefaultOptions) : (options === null || options === void 0 ? void 0 : options.config) ? Object.assign(Object.assign({}, appDefaultOptions), options.config) : appDefaultOptions;
+            appOptions.helmetOptions = Object.assign(Object.assign({}, appDefaultOptions.helmetOptions), appOptions.helmetOptions || {});
+            appOptions.corsOptions = Object.assign(Object.assign({}, appDefaultOptions.corsOptions), appOptions.corsOptions || {});
+            appOptions.expressStaticOptions = Object.assign(Object.assign({}, appDefaultOptions.expressStaticOptions), appOptions.expressStaticOptions || {});
             const app = (0, express_1.default)();
             const context = {
                 app,
@@ -100,6 +109,9 @@ function createApp(options) {
                 logger: (0, logger_1.createLogger)({ baseDir: ((_a = appOptions === null || appOptions === void 0 ? void 0 : appOptions.loggerOptions) === null || _a === void 0 ? void 0 : _a.baseDir) || 'logs' }),
                 plugins: {}
             };
+            // First load all the services
+            const servicesPath = app_1.AppDir + server_config_1.default.globServicesPath;
+            yield (0, file_loader_1.default)(servicesPath, true);
             if ((options === null || options === void 0 ? void 0 : options.plugins) && options.plugins.length > 0) {
                 for (const plugin of options.plugins) {
                     if (plugin) {
@@ -136,17 +148,15 @@ function createApp(options) {
                 }
             }
             const apiPrefix = (0, app_1.getConfig)('API_PREFIX', '/api');
-            const appPort = (0, app_1.getConfig)('PORT', 3000);
+            const appPort = (0, app_1.getConfig)('PORT', 3100);
             const appName = (0, app_1.getConfig)('NAME', 'App');
             const appHost = (0, app_1.getConfig)('HOST', 'localhost');
             const appVersion = (0, app_1.getConfig)('VERSION', '1.0.0');
-            const servicesPath = app_1.AppDir + server_config_1.default.globServicesPath;
-            yield (0, file_loader_1.default)(servicesPath, true);
-            (0, helmet_1.loadHelmetModule)(app);
+            (0, helmet_1.loadHelmetModule)(app, appOptions.helmetOptions);
             app.use((0, cors_1.default)(appOptions.corsOptions));
             app.options('*', (0, cors_1.default)());
             // Static files
-            app.use("/public", express_1.default.static(path_1.default.join(app_1.AppDir, "public"), { maxAge: 31557600000 }));
+            app.use("/public", express_1.default.static(path_1.default.join(app_1.AppDir, "public"), appOptions.expressStaticOptions));
             // Home page
             app.get("/", (req, res) => {
                 res.json({
@@ -255,6 +265,8 @@ function createApp(options) {
                 server.on("error", (err) => {
                     logger_1.logger.error(err);
                 });
+                process.on("SIGINT", () => gracefulShutdown(server));
+                process.on("SIGTERM", () => gracefulShutdown(server));
             }));
         }
         catch (error) {
@@ -262,4 +274,15 @@ function createApp(options) {
         }
     });
 }
+const gracefulShutdown = (server) => {
+    console.log(chalk_1.default.blue("\n👋 Bye-bye! See you soon!"));
+    server.close(() => {
+        console.log(chalk_1.default.red("💥 Server has been shut down gracefully."));
+        process.exit(0);
+    });
+    setTimeout(() => {
+        console.error(chalk_1.default.red("⏳ Forced shutdown due to timeout."));
+        process.exit(1);
+    }, 5000);
+};
 //# sourceMappingURL=index.js.map
