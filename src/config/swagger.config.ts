@@ -6,13 +6,7 @@ export type SwaggerOptions = {
 }
 const config = {
     baseDir: '/docs',
-    securitySchemes: {
-        bearerAuth: {
-            type: "http",
-            scheme: "bearer",
-            bearerFormat: "JWT",
-        }
-    }
+    securitySchemes: {}
 } as SwaggerOptions;
 
 export default config;
