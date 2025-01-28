@@ -257,9 +257,9 @@ export async function createApp(options?: CreateAppOptions) {
 }
 
 const gracefulShutdown = (server: Server) => {
-    console.log(chalk.blue("\n👋 Bye-bye! See you soon!"));
+    console.log(chalk.yellow("\n👋 Bye-bye! See you soon!"));
     server.close(() => {
-        console.log(chalk.red("💥 Server has been shut down gracefully."));
+        console.log(chalk.magenta("💥 Server has been shut down gracefully."));
         process.exit(0);
     });
 

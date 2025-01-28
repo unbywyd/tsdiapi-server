@@ -275,9 +275,9 @@ function createApp(options) {
     });
 }
 const gracefulShutdown = (server) => {
-    console.log(chalk_1.default.blue("\n👋 Bye-bye! See you soon!"));
+    console.log(chalk_1.default.yellow("\n👋 Bye-bye! See you soon!"));
     server.close(() => {
-        console.log(chalk_1.default.red("💥 Server has been shut down gracefully."));
+        console.log(chalk_1.default.magenta("💥 Server has been shut down gracefully."));
         process.exit(0);
     });
     setTimeout(() => {
