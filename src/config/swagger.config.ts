@@ -5,8 +5,7 @@ export type SwaggerOptions = {
     securitySchemes?: oa.OpenAPIObject['components']['securitySchemes'];
 }
 const config = {
-    baseDir: '/docs',
-    securitySchemes: {}
+    baseDir: '/docs'
 } as SwaggerOptions;
 
 export default config;

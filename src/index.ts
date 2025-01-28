@@ -209,7 +209,7 @@ export async function createApp(options?: CreateAppOptions) {
                 {
                     components: {
                         schemas,
-                        securitySchemes: appOptions.swaggerOptions?.securitySchemes || {},
+                        ...(appOptions.swaggerOptions?.securitySchemes ? { securitySchemes: appOptions.swaggerOptions.securitySchemes } : {}),
                     },
 
                     info: info,

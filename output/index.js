@@ -227,10 +227,7 @@ function createApp(options) {
                     }
                 }
                 const spec = (0, routing_controllers_openapi_1.routingControllersToSpec)(storage, { routePrefix: apiPrefix }, {
-                    components: {
-                        schemas,
-                        securitySchemes: ((_b = appOptions.swaggerOptions) === null || _b === void 0 ? void 0 : _b.securitySchemes) || {},
-                    },
+                    components: Object.assign({ schemas }, (((_b = appOptions.swaggerOptions) === null || _b === void 0 ? void 0 : _b.securitySchemes) ? { securitySchemes: appOptions.swaggerOptions.securitySchemes } : {})),
                     info: info,
                 });
                 const baseDir = ((_c = appOptions === null || appOptions === void 0 ? void 0 : appOptions.swaggerOptions) === null || _c === void 0 ? void 0 : _c.baseDir) || '/docs';
