@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import type { HelmetOptions } from 'helmet';
 import path from 'path';
 
 import express from 'express'
@@ -26,6 +27,7 @@ import fileLoader from './modules/file-loader'
 import { AsyncResolver } from 'routing-controllers-openapi-extra';
 import Container from 'typedi';
 import { AppContext, AppOptions, AppPlugin, CreateAppOptions } from './types';
+import helmetOptions from './config/helmet.config';
 export * from './types';
 
 const appDefaultOptions: AppOptions = {
@@ -33,11 +35,30 @@ const appDefaultOptions: AppOptions = {
     environment,
     corsOptions,
     swaggerOptions,
+    helmetOptions: helmetOptions,
+    expressStaticOptions: {
+        maxAge: 31557600000,
+    },
 }
 
 export async function createApp(options?: CreateAppOptions) {
     try {
         const appOptions = typeof options?.config === 'function' ? options.config(appDefaultOptions) : options?.config ? { ...appDefaultOptions, ...options.config } : appDefaultOptions;
+        appOptions.helmetOptions = {
+            ...appDefaultOptions.helmetOptions,
+            ...appOptions.helmetOptions || {}
+        } as HelmetOptions;
+
+        appOptions.corsOptions = {
+            ...appDefaultOptions.corsOptions,
+            ...appOptions.corsOptions || {}
+        };
+
+        appOptions.expressStaticOptions = {
+            ...appDefaultOptions.expressStaticOptions,
+            ...appOptions.expressStaticOptions || {}
+        };
+
         const app: express.Application = express();
         const context: AppContext = {
             app,
@@ -48,6 +69,11 @@ export async function createApp(options?: CreateAppOptions) {
             logger: createLogger({ baseDir: appOptions?.loggerOptions?.baseDir || 'logs' }),
             plugins: {} as Record<string, AppPlugin>
         }
+
+        // First load all the services
+        const servicesPath = AppDir + serverOptions.globServicesPath;
+        await fileLoader(servicesPath, true);
+
         if (options?.plugins && options.plugins.length > 0) {
             for (const plugin of options.plugins) {
                 if (plugin) {
@@ -72,6 +98,7 @@ export async function createApp(options?: CreateAppOptions) {
                 }
             }
         }
+
         if (options?.onInit) {
             try {
                 await options.onInit(context);
@@ -82,22 +109,20 @@ export async function createApp(options?: CreateAppOptions) {
         }
 
         const apiPrefix = getConfig('API_PREFIX', '/api');
-        const appPort = getConfig('PORT', 3000);
+        const appPort = getConfig('PORT', 3100);
         const appName = getConfig('NAME', 'App');
         const appHost = getConfig('HOST', 'localhost');
         const appVersion = getConfig('VERSION', '1.0.0');
 
-        const servicesPath = AppDir + serverOptions.globServicesPath;
-        await fileLoader(servicesPath, true);
 
-        loadHelmetModule(app);
+        loadHelmetModule(app, appOptions.helmetOptions);
         app.use(cors(appOptions.corsOptions));
         app.options('*', cors());
 
         // Static files
         app.use(
             "/public",
-            express.static(path.join(AppDir, "public"), { maxAge: 31557600000 })
+            express.static(path.join(AppDir, "public"), appOptions.expressStaticOptions)
         );
 
         // Home page
