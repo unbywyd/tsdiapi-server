@@ -7,7 +7,7 @@ TSDIAPI is a modern, scalable, and modular framework for building APIs using Typ
 ## Key Features
 
 - **Dependency Injection (DI):** Powered by `TypeDI`, ensuring clean and testable architecture.
-- **Modular Plugin System:** Extend core functionality with plugins like `tsdiapi-io` (WebSocket) and `tsdiapi-cron` (task scheduling).
+- **Modular Plugin System:** Extend core functionality with plugins like `@tsdiapi/io` (WebSocket) and `@tsdiapi/cron` (task scheduling).
 - **Routing Simplified:** Declarative route handling using `routing-controllers`.
 - **Validation & Transformation:** Leverage `class-validator` and `class-transformer` for data validation and conversion.
 - **OpenAPI Documentation:** Auto-generate API docs with Swagger support.
@@ -21,12 +21,37 @@ TSDIAPI is a modern, scalable, and modular framework for building APIs using Typ
 ### Installation
 
 1. **Initialize a New Project:**
-   Use the `tsdiapi-cli` tool to create and set up a new project:
+   Use the **TSDIAPI CLI** tool to create and set up a new project:
 
-   ```bash
-   npx tsdiapi init
+  ```bash
+  npm -g install @tsdiapi/cli
+  tsdiapi create my-tsdiapi-project
    ```
 
+````
+
+2. **Project Base Structure:**
+
+   ```plaintext
+   my-tsdiapi-project/
+    ├── src/
+    │    ├── api/features/{feature-name}/
+    │    └── main.ts
+    ├── package.json
+    ├── tsconfig.json
+    └── .env.[development|production]
+   ```
+
+3. **Commands:**
+
+   In your project, you can use these commands (via `npm` or `tsdiapi`):
+
+   - **Build:** `npm run build`
+   - **Start Development Server:** `npm run dev`
+   - **Add Plugins:** `tsdiapi add plugin <plugin-name>`
+   - **Generate Resources:** `tsdiapi generate <resource-type>`
+
+---
 
 ## How It Works
 
@@ -48,7 +73,7 @@ TSDIAPI is a modern, scalable, and modular framework for building APIs using Typ
 ### Basic Server Setup
 
 ```typescript
-import { createApp } from "tsdiapi-server";
+import { createApp } from "@tsdiapi/server";
 
 createApp({
   plugins: [
@@ -57,24 +82,24 @@ createApp({
 });
 ```
 
-### Plugin Example: WebSockets
+---
 
-Install the `tsdiapi-io` plugin for WebSocket support:
+## Plugin Example: WebSockets
+
+Install the WebSocket plugin:
 
 ```bash
-npm install tsdiapi-io
+npm install @tsdiapi/io
 ```
 
-Then, integrate it into your server:
+Then, register it in your server:
 
 ```typescript
-import { createApp } from "tsdiapi";
-import ioPlugin from "tsdiapi-io";
+import { createApp } from "@tsdiapi/server";
+import ioPlugin from "@tsdiapi/io";
 
 createApp({
-  plugins: [
-    ioPlugin()
-  ],
+  plugins: [ioPlugin()],
 });
 ```
 
@@ -84,19 +109,21 @@ createApp({
 
 ### Plugins
 
-- **WebSockets:** Real-time communication using `tsdiapi-io`.
-- **Task Scheduling:** Manage cron jobs with `tsdiapi-cron`.
-- **Prisma Integration:** Seamlessly connect to a Prisma database with `tsdiapi-prisma`.
+- **WebSockets:** Real-time communication using `@tsdiapi/io`.
+- **Task Scheduling:** Manage cron jobs with `@tsdiapi/cron`.
+- **Prisma Integration:** Connect to a Prisma database with `@tsdiapi/prisma`.
 
 ### Lifecycle Hooks
 
-Plugins can hook into these lifecycle stages:
+Plugins can hook into the following stages:
 
 - `onInit`: Perform setup tasks.
 - `beforeStart`: Configure or validate before the server starts.
 - `afterStart`: Execute tasks after the server begins listening.
 
-### Controllers & Services
+---
+
+## Controllers & Services
 
 - Use `routing-controllers` for declarative route handling.
 - Manage business logic with DI-based services.
@@ -106,3 +133,10 @@ Plugins can hook into these lifecycle stages:
 ## Summary
 
 TSDIAPI offers a clean, modular foundation for building modern APIs. It reduces boilerplate, promotes scalability, and simplifies integration with tools like WebSockets, task schedulers, and more. Build better APIs with less effort!
+
+---
+
+## License
+
+This project is licensed under the **MIT License**.
+````
