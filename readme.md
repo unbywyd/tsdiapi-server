@@ -21,7 +21,7 @@ TSDIAPI is a modern, scalable, and modular framework for building APIs using Typ
 ### Installation
 
 1. **Initialize a New Project:**
-   Use the **TSDIAPI CLI** tool to create and set up a new project:
+   Use the [@tsdiapi/cli](https://github.com/unbywyd/tsdiapi-cli) tool to create and set up a new project:
 
 ```bash
 npm -g install @tsdiapi/cli
