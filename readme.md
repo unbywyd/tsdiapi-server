@@ -138,4 +138,3 @@ TSDIAPI offers a clean, modular foundation for building modern APIs. It reduces 
 ## License
 
 This project is licensed under the **MIT License**.
-````
