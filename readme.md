@@ -7,7 +7,7 @@ TSDIAPI is a modern, scalable, and modular framework for building APIs using Typ
 ## Key Features
 
 - **Dependency Injection (DI):** Powered by `TypeDI`, ensuring clean and testable architecture.
-- **Modular Plugin System:** Extend core functionality with plugins like `@tsdiapi/io` (WebSocket) and `@tsdiapi/cron` (task scheduling).
+- **Modular Plugin System:** Extend core functionality with plugins like `@tsdiapi/io` (WebSocket) and `@tsdiapi/cron` (task scheduling) and more.
 - **Routing Simplified:** Declarative route handling using `routing-controllers`.
 - **Validation & Transformation:** Leverage `class-validator` and `class-transformer` for data validation and conversion.
 - **OpenAPI Documentation:** Auto-generate API docs with Swagger support.
@@ -23,33 +23,32 @@ TSDIAPI is a modern, scalable, and modular framework for building APIs using Typ
 1. **Initialize a New Project:**
    Use the **TSDIAPI CLI** tool to create and set up a new project:
 
-  ```bash
-  npm -g install @tsdiapi/cli
-  tsdiapi create my-tsdiapi-project
-   ```
+```bash
+npm -g install @tsdiapi/cli
+tsdiapi create my-tsdiapi-project
+```
 
-````
 
 2. **Project Base Structure:**
 
-   ```plaintext
-   my-tsdiapi-project/
-    ├── src/
-    │    ├── api/features/{feature-name}/
-    │    └── main.ts
-    ├── package.json
-    ├── tsconfig.json
-    └── .env.[development|production]
-   ```
+```plaintext
+my-tsdiapi-project/
+├── src/
+│    ├── api/features/{feature-name}/
+│    └── main.ts
+├── package.json
+├── tsconfig.json
+└── .env.[development|production]
+```
 
 3. **Commands:**
 
-   In your project, you can use these commands (via `npm` or `tsdiapi`):
+  In your project, you can use these commands (via `npm` or `tsdiapi`):
 
-   - **Build:** `npm run build`
-   - **Start Development Server:** `npm run dev`
-   - **Add Plugins:** `tsdiapi add plugin <plugin-name>`
-   - **Generate Resources:** `tsdiapi generate <resource-type>`
+  - **Build:** `npm run build`
+  - **Start Development Server:** `npm run dev`
+  - **Add Plugins:** `tsdiapi add plugin <plugin-name>`
+  - **Generate Resources:** `tsdiapi generate <resource-type>`
 
 ---
 
