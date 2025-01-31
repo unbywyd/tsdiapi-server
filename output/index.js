@@ -48,7 +48,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Container = exports.logger = exports.getConfig = exports.environment = exports.AppDir = exports.AppConfig = void 0;
+exports.Container = exports.logger = exports.getConfig = exports.environment = exports.AppDir = exports.AppConfig = exports.jsonschema = void 0;
 exports.createApp = createApp;
 require("reflect-metadata");
 const path_1 = __importDefault(require("path"));
@@ -81,6 +81,8 @@ exports.Container = typedi_1.default;
 const helmet_config_1 = __importDefault(require("./config/helmet.config"));
 const chalk_1 = __importDefault(require("chalk"));
 __exportStar(require("./types"), exports);
+const open_1 = __importDefault(require("open"));
+exports.jsonschema = __importStar(require("./modules/jsonschema"));
 const appDefaultOptions = {
     appConfig: app_1.AppConfig,
     environment: app_1.environment,
@@ -103,6 +105,8 @@ function createApp(options) {
             const context = {
                 app,
                 apiDir: app_1.AppDir + '/api',
+                routingControllersMetaStorage: null,
+                schemas: {},
                 appDir: app_1.AppDir,
                 container: typedi_1.default,
                 config: appOptions,
@@ -212,6 +216,8 @@ function createApp(options) {
                     refPointerPrefix: "#/components/schemas/",
                 });
                 const storage = (0, routing_controllers_1.getMetadataArgsStorage)();
+                context.routingControllersMetaStorage = storage;
+                context.schemas = schemas;
                 const defaultInfo = {
                     description: `${appName} API Documentation`,
                     title: appName,
@@ -227,7 +233,7 @@ function createApp(options) {
                     }
                 }
                 const spec = (0, routing_controllers_openapi_1.routingControllersToSpec)(storage, { routePrefix: apiPrefix }, {
-                    components: Object.assign({ schemas }, (((_b = appOptions.swaggerOptions) === null || _b === void 0 ? void 0 : _b.securitySchemes) ? { securitySchemes: appOptions.swaggerOptions.securitySchemes } : {})),
+                    components: Object.assign({ schemas: schemas }, (((_b = appOptions.swaggerOptions) === null || _b === void 0 ? void 0 : _b.securitySchemes) ? { securitySchemes: appOptions.swaggerOptions.securitySchemes } : {})),
                     info: info,
                 });
                 const baseDir = ((_c = appOptions === null || appOptions === void 0 ? void 0 : appOptions.swaggerOptions) === null || _c === void 0 ? void 0 : _c.baseDir) || '/docs';
@@ -238,6 +244,11 @@ function createApp(options) {
                 server.listen(appPort, () => __awaiter(this, void 0, void 0, function* () {
                     logger_1.logger.info(`🚀 Server started at http://${appHost}:${appPort}\n🚨️ Environment: ${appOptions.environment}`);
                     logger_1.logger.info(`Documentation is available at http://${appHost}:${appPort}${baseDir}`);
+                    (0, open_1.default)(`http://${appHost}:${appPort}${baseDir}`).then(() => {
+                        console.log(chalk_1.default.green("📖 Documentation opened in browser!"));
+                    }).catch(() => {
+                        console.log(chalk_1.default.yellow("📖 Documentation can be opened in browser at:"), chalk_1.default.blue(`http://${appHost}:${appPort}${baseDir}`));
+                    });
                     if (options === null || options === void 0 ? void 0 : options.afterStart) {
                         try {
                             yield options.afterStart(context);

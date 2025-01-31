@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import type { HelmetOptions } from 'helmet';
 import path from 'path';
-
 import express from 'express'
 import cors from 'cors';
 import {
@@ -30,6 +29,9 @@ import { AppContext, AppOptions, AppPlugin, CreateAppOptions } from './types';
 import helmetOptions from './config/helmet.config';
 import chalk from 'chalk';
 export * from './types';
+import type { SchemaObject } from 'openapi3-ts';
+import open from 'open';
+export * as jsonschema from './modules/jsonschema';
 
 const appDefaultOptions: AppOptions = {
     appConfig: AppConfig,
@@ -64,6 +66,8 @@ export async function createApp(options?: CreateAppOptions) {
         const context: AppContext = {
             app,
             apiDir: AppDir + '/api',
+            routingControllersMetaStorage: null,
+            schemas: {},
             appDir: AppDir,
             container: Container,
             config: appOptions,
@@ -181,11 +185,14 @@ export async function createApp(options?: CreateAppOptions) {
         }
 
         process.nextTick(async () => {
-            const schemas = validationMetadatasToSchemas({
+            const schemas: Record<string, SchemaObject> = validationMetadatasToSchemas({
                 refPointerPrefix: "#/components/schemas/",
             });
 
             const storage = getMetadataArgsStorage();
+
+            context.routingControllersMetaStorage = storage;
+            context.schemas = schemas;
 
             const defaultInfo = {
                 description: `${appName} API Documentation`,
@@ -208,7 +215,7 @@ export async function createApp(options?: CreateAppOptions) {
                 { routePrefix: apiPrefix },
                 {
                     components: {
-                        schemas,
+                        schemas: schemas,
                         ...(appOptions.swaggerOptions?.securitySchemes ? { securitySchemes: appOptions.swaggerOptions.securitySchemes } : {}),
                     },
 
@@ -224,6 +231,11 @@ export async function createApp(options?: CreateAppOptions) {
             server.listen(appPort, async () => {
                 logger.info(`🚀 Server started at http://${appHost}:${appPort}\n🚨️ Environment: ${appOptions.environment}`);
                 logger.info(`Documentation is available at http://${appHost}:${appPort}${baseDir}`);
+                open(`http://${appHost}:${appPort}${baseDir}`).then(() => {
+                    console.log(chalk.green("📖 Documentation opened in browser!"));
+                }).catch(() => {
+                    console.log(chalk.yellow("📖 Documentation can be opened in browser at:"), chalk.blue(`http://${appHost}:${appPort}${baseDir}`));
+                });
                 if (options?.afterStart) {
                     try {
                         await options.afterStart(context);
