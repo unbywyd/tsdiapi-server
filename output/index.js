@@ -340,19 +340,17 @@ const gracefulShutdown = (server) => __awaiter(void 0, void 0, void 0, function*
         console.log(gradient.vice("\n👋 Bye-bye! Take care, and happy coding! 🚀\n"));
         process.exit(0);
     });
-    setTimeout(() => {
-        console.error(boxen(gradient.cristal(`
+    console.error(boxen(gradient.cristal(`
 ⏳ Forced shutdown due to timeout.
 ⚠ Some processes didn't close in time!
 💀 Terminating immediately...
-                `), {
-            padding: 1,
-            margin: 1,
-            borderStyle: "bold",
-            borderColor: "red",
-            align: "left",
-        }));
-        process.exit(1);
-    }, 5000);
+            `), {
+        padding: 1,
+        margin: 1,
+        borderStyle: "bold",
+        borderColor: "red",
+        align: "left",
+    }));
+    process.exit(1);
 });
 //# sourceMappingURL=index.js.map
