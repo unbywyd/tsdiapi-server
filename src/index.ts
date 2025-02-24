@@ -31,7 +31,18 @@ import chalk from 'chalk';
 export * from './types';
 import type { SchemaObject } from 'openapi3-ts';
 import open from 'open';
+import figlet from "figlet";
 export * as jsonschema from './modules/jsonschema';
+
+async function loadGradient() {
+    return (await eval('import("gradient-string")')).default;
+}
+async function loadBoxen() {
+    return (await eval('import("boxen")')).default;
+}
+async function loadOra() {
+    return (await eval('import("ora")')).default;
+}
 
 const appDefaultOptions: AppOptions = {
     appConfig: AppConfig,
@@ -46,6 +57,18 @@ const appDefaultOptions: AppOptions = {
 
 export async function createApp(options?: CreateAppOptions) {
     try {
+        const ora = await loadOra();
+        const gradient = await loadGradient();
+        const boxen = await loadBoxen();
+
+        console.log(gradient.pastel.multiline(figlet.textSync("TSDIAPI", { horizontalLayout: "full" })));
+
+        const spinner = ora({
+            text: chalk.blue("🔧 Initializing application..."),
+            spinner: "dots",
+        }).start();
+        spinner.succeed(gradient.rainbow("✨ Starting the server..."));
+
         const appOptions = typeof options?.config === 'function' ? options.config(appDefaultOptions) : options?.config ? { ...appDefaultOptions, ...options.config } : appDefaultOptions;
         appOptions.helmetOptions = {
             ...appDefaultOptions.helmetOptions,
@@ -75,6 +98,7 @@ export async function createApp(options?: CreateAppOptions) {
             plugins: {} as Record<string, AppPlugin>
         }
 
+        spinner.text = chalk.yellow("📦 Loading services...");
         // First load all the services
         const servicesPath = AppDir + serverOptions.globServicesPath;
         await fileLoader(servicesPath, true);
@@ -90,7 +114,7 @@ export async function createApp(options?: CreateAppOptions) {
                     try {
                         await plugin.onInit(context);
                     } catch (error) {
-                        console.error(`Plugin ${plugin.name} onInit error:`, error);
+                        console.error(chalk.red(`⚠️ Plugin ${plugin.name} failed to initialize: ${error.message}`));
                     }
                 }
                 if (plugin?.bootstrapFilesGlobPath) {
@@ -98,7 +122,7 @@ export async function createApp(options?: CreateAppOptions) {
                     try {
                         await fileLoader(AppDir + "/api/**" + startedWithSlash + plugin.bootstrapFilesGlobPath, true);
                     } catch (error) {
-                        console.error(`Plugin ${plugin.name} bootstrapFilesGlobPath error:`, error);
+                        console.error(chalk.red(`⚠️ Plugin ${plugin.name} failed to load files: ${error.message}`));
                     }
                 }
             }
@@ -170,7 +194,7 @@ export async function createApp(options?: CreateAppOptions) {
                     try {
                         await plugin.beforeStart(context);
                     } catch (error) {
-                        console.error(`Plugin ${plugin.name} beforeStart error:`, error);
+                        console.error(chalk.red(`⚠️ Error in plugin "${plugin.name}" during beforeStart:\n`), error.stack || error);
                     }
                 }
             }
@@ -229,58 +253,119 @@ export async function createApp(options?: CreateAppOptions) {
             });
 
             server.listen(appPort, async () => {
-                logger.info(`🚀 Server started at http://${appHost}:${appPort}\n🚨️ Environment: ${appOptions.environment}`);
-                logger.info(`Documentation is available at http://${appHost}:${appPort}${baseDir}`);
-                open(`http://${appHost}:${appPort}${baseDir}`).then(() => {
-                    console.log(chalk.green("📖 Documentation opened in browser!"));
-                }).catch(() => {
-                    console.log(chalk.yellow("📖 Documentation can be opened in browser at:"), chalk.blue(`http://${appHost}:${appPort}${baseDir}`));
-                });
-                if (options?.afterStart) {
-                    try {
-                        await options.afterStart(context);
-                    } catch (error) {
-                        console.error(error);
+                try {
+                    spinner.succeed(chalk.green("✅ Server started successfully!"));
+
+                    logger.info(`🚀 Server started at http://${appHost}:${appPort}\n🚨️ Environment: ${appOptions.environment}`);
+                    logger.info(`Documentation is available at http://${appHost}:${appPort}${baseDir}`);
+
+                    const serverUrl = `http://${appHost}:${appPort}`;
+                    const docsUrl = `http://${appHost}:${appPort}${baseDir}`;
+                    console.log(
+                        boxen(
+                            `${chalk.green("🚀")} ${chalk.green("Server started successfully!")}\n` +
+                            `${chalk.cyan("🌍 Server is running at:")} ${chalk.green(serverUrl)}\n` +
+                            `${chalk.cyan("📖 API Docs:")} ${chalk.green(docsUrl)}`,
+                            { padding: 1, borderColor: "cyan", align: "left" }
+                        )
+                    );
+
+                    open(`http://${appHost}:${appPort}${baseDir}`).then(() => {
+                        logger.info("📖 Documentation opened in browser!");
+                    }).catch(() => {
+                        console.log(chalk.yellow("📖 Documentation can be opened in browser at:"), chalk.blue(`http://${appHost}:${appPort}${baseDir}`));
+                    });
+                    if (options?.afterStart) {
+                        try {
+                            await options.afterStart(context);
+                        } catch (error) {
+                            console.error(error);
+                        }
                     }
-                }
-                if (options?.plugins && options.plugins.length > 0) {
-                    for (const plugin of options.plugins) {
-                        if (plugin.afterStart) {
-                            try {
-                                await plugin.afterStart(context);
-                            } catch (error) {
-                                console.error(error);
+                    if (options?.plugins && options.plugins.length > 0) {
+                        for (const plugin of options.plugins) {
+                            if (plugin.afterStart) {
+                                try {
+                                    await plugin.afterStart(context);
+                                } catch (error) {
+                                    console.error(error);
+                                }
                             }
                         }
                     }
+                } catch (error) {
+                    console.error(chalk.red("❌ Fatal error during application startup:"), error);
                 }
             });
             server.on("error", (err: any) => {
                 logger.error(err);
             });
 
-            process.on("SIGINT", () => gracefulShutdown(server));
-            process.on("SIGTERM", () => gracefulShutdown(server));
+            ["SIGINT", "SIGTERM"].forEach(signal => {
+                process.on(signal, async () => {
+                    console.log(chalk.yellow(`⚠️ Received ${signal}, shutting down gracefully...`));
+                    await gracefulShutdown(server);
+                });
+            });
         });
 
     } catch (error) {
-        console.error(error);
+        console.error(chalk.red("❌ Fatal error during application startup:"), error);
     }
 }
 
-const gracefulShutdown = (server: Server) => {
-    console.log(chalk.yellow("\n👋 Bye-bye! See you soon!"));
+const gracefulShutdown = async (server: Server) => {
+    const ora = await loadOra();
+    const gradient = await loadGradient();
+    const boxen = await loadBoxen();
+
+    const shutdownSpinner = ora({
+        text: gradient.passion("👋 Preparing for shutdown..."),
+        spinner: "earth",
+    }).start();
+
+    shutdownSpinner.succeed(gradient.rainbow("✨ Almost done, cleaning up resources..."));
+
     server.close(() => {
-        console.log(chalk.magenta("💥 Server has been shut down gracefully."));
+        console.log(
+            boxen(
+                gradient.pastel(`
+💥 Server has been shut down gracefully.
+🔌 All connections closed. See you next time!
+🚀 Keep building amazing things!`),
+                {
+                    padding: 1,
+                    margin: 1,
+                    borderStyle: "double",
+                    borderColor: "magenta",
+                    align: "left",
+                }
+            )
+        );
+
+        console.log(gradient.vice("\n👋 Bye-bye! Take care, and happy coding! 🚀\n"));
         process.exit(0);
     });
 
     setTimeout(() => {
-        console.error(chalk.red("⏳ Forced shutdown due to timeout."));
+        console.error(
+            boxen(
+                gradient.cristal(`
+⏳ Forced shutdown due to timeout.
+⚠ Some processes didn't close in time!
+💀 Terminating immediately...
+                `),
+                {
+                    padding: 1,
+                    margin: 1,
+                    borderStyle: "bold",
+                    borderColor: "red",
+                    align: "left",
+                }
+            )
+        );
         process.exit(1);
     }, 5000);
 };
-
-
 
 export { AppConfig, AppDir, environment, getConfig, logger, Container };

@@ -82,7 +82,23 @@ const helmet_config_1 = __importDefault(require("./config/helmet.config"));
 const chalk_1 = __importDefault(require("chalk"));
 __exportStar(require("./types"), exports);
 const open_1 = __importDefault(require("open"));
+const figlet_1 = __importDefault(require("figlet"));
 exports.jsonschema = __importStar(require("./modules/jsonschema"));
+function loadGradient() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return (yield eval('import("gradient-string")')).default;
+    });
+}
+function loadBoxen() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return (yield eval('import("boxen")')).default;
+    });
+}
+function loadOra() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return (yield eval('import("ora")')).default;
+    });
+}
 const appDefaultOptions = {
     appConfig: app_1.AppConfig,
     environment: app_1.environment,
@@ -97,6 +113,15 @@ function createApp(options) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
         try {
+            const ora = yield loadOra();
+            const gradient = yield loadGradient();
+            const boxen = yield loadBoxen();
+            console.log(gradient.pastel.multiline(figlet_1.default.textSync("TSDIAPI", { horizontalLayout: "full" })));
+            const spinner = ora({
+                text: chalk_1.default.blue("🔧 Initializing application..."),
+                spinner: "dots",
+            }).start();
+            spinner.succeed(gradient.rainbow("✨ Starting the server..."));
             const appOptions = typeof (options === null || options === void 0 ? void 0 : options.config) === 'function' ? options.config(appDefaultOptions) : (options === null || options === void 0 ? void 0 : options.config) ? Object.assign(Object.assign({}, appDefaultOptions), options.config) : appDefaultOptions;
             appOptions.helmetOptions = Object.assign(Object.assign({}, appDefaultOptions.helmetOptions), appOptions.helmetOptions || {});
             appOptions.corsOptions = Object.assign(Object.assign({}, appDefaultOptions.corsOptions), appOptions.corsOptions || {});
@@ -113,6 +138,7 @@ function createApp(options) {
                 logger: (0, logger_1.createLogger)({ baseDir: ((_a = appOptions === null || appOptions === void 0 ? void 0 : appOptions.loggerOptions) === null || _a === void 0 ? void 0 : _a.baseDir) || 'logs' }),
                 plugins: {}
             };
+            spinner.text = chalk_1.default.yellow("📦 Loading services...");
             // First load all the services
             const servicesPath = app_1.AppDir + server_config_1.default.globServicesPath;
             yield (0, file_loader_1.default)(servicesPath, true);
@@ -128,7 +154,7 @@ function createApp(options) {
                             yield plugin.onInit(context);
                         }
                         catch (error) {
-                            console.error(`Plugin ${plugin.name} onInit error:`, error);
+                            console.error(chalk_1.default.red(`⚠️ Plugin ${plugin.name} failed to initialize: ${error.message}`));
                         }
                     }
                     if (plugin === null || plugin === void 0 ? void 0 : plugin.bootstrapFilesGlobPath) {
@@ -137,7 +163,7 @@ function createApp(options) {
                             yield (0, file_loader_1.default)(app_1.AppDir + "/api/**" + startedWithSlash + plugin.bootstrapFilesGlobPath, true);
                         }
                         catch (error) {
-                            console.error(`Plugin ${plugin.name} bootstrapFilesGlobPath error:`, error);
+                            console.error(chalk_1.default.red(`⚠️ Plugin ${plugin.name} failed to load files: ${error.message}`));
                         }
                     }
                 }
@@ -197,7 +223,7 @@ function createApp(options) {
                             yield plugin.beforeStart(context);
                         }
                         catch (error) {
-                            console.error(`Plugin ${plugin.name} beforeStart error:`, error);
+                            console.error(chalk_1.default.red(`⚠️ Error in plugin "${plugin.name}" during beforeStart:\n`), error.stack || error);
                         }
                     }
                 }
@@ -242,55 +268,97 @@ function createApp(options) {
                     res.json(spec);
                 });
                 server.listen(appPort, () => __awaiter(this, void 0, void 0, function* () {
-                    logger_1.logger.info(`🚀 Server started at http://${appHost}:${appPort}\n🚨️ Environment: ${appOptions.environment}`);
-                    logger_1.logger.info(`Documentation is available at http://${appHost}:${appPort}${baseDir}`);
-                    (0, open_1.default)(`http://${appHost}:${appPort}${baseDir}`).then(() => {
-                        console.log(chalk_1.default.green("📖 Documentation opened in browser!"));
-                    }).catch(() => {
-                        console.log(chalk_1.default.yellow("📖 Documentation can be opened in browser at:"), chalk_1.default.blue(`http://${appHost}:${appPort}${baseDir}`));
-                    });
-                    if (options === null || options === void 0 ? void 0 : options.afterStart) {
-                        try {
-                            yield options.afterStart(context);
+                    try {
+                        spinner.succeed(chalk_1.default.green("✅ Server started successfully!"));
+                        logger_1.logger.info(`🚀 Server started at http://${appHost}:${appPort}\n🚨️ Environment: ${appOptions.environment}`);
+                        logger_1.logger.info(`Documentation is available at http://${appHost}:${appPort}${baseDir}`);
+                        const serverUrl = `http://${appHost}:${appPort}`;
+                        const docsUrl = `http://${appHost}:${appPort}${baseDir}`;
+                        console.log(boxen(`${chalk_1.default.green("🚀")} ${chalk_1.default.green("Server started successfully!")}\n` +
+                            `${chalk_1.default.cyan("🌍 Server is running at:")} ${chalk_1.default.green(serverUrl)}\n` +
+                            `${chalk_1.default.cyan("📖 API Docs:")} ${chalk_1.default.green(docsUrl)}`, { padding: 1, borderColor: "cyan", align: "left" }));
+                        (0, open_1.default)(`http://${appHost}:${appPort}${baseDir}`).then(() => {
+                            logger_1.logger.info("📖 Documentation opened in browser!");
+                        }).catch(() => {
+                            console.log(chalk_1.default.yellow("📖 Documentation can be opened in browser at:"), chalk_1.default.blue(`http://${appHost}:${appPort}${baseDir}`));
+                        });
+                        if (options === null || options === void 0 ? void 0 : options.afterStart) {
+                            try {
+                                yield options.afterStart(context);
+                            }
+                            catch (error) {
+                                console.error(error);
+                            }
                         }
-                        catch (error) {
-                            console.error(error);
-                        }
-                    }
-                    if ((options === null || options === void 0 ? void 0 : options.plugins) && options.plugins.length > 0) {
-                        for (const plugin of options.plugins) {
-                            if (plugin.afterStart) {
-                                try {
-                                    yield plugin.afterStart(context);
-                                }
-                                catch (error) {
-                                    console.error(error);
+                        if ((options === null || options === void 0 ? void 0 : options.plugins) && options.plugins.length > 0) {
+                            for (const plugin of options.plugins) {
+                                if (plugin.afterStart) {
+                                    try {
+                                        yield plugin.afterStart(context);
+                                    }
+                                    catch (error) {
+                                        console.error(error);
+                                    }
                                 }
                             }
                         }
+                    }
+                    catch (error) {
+                        console.error(chalk_1.default.red("❌ Fatal error during application startup:"), error);
                     }
                 }));
                 server.on("error", (err) => {
                     logger_1.logger.error(err);
                 });
-                process.on("SIGINT", () => gracefulShutdown(server));
-                process.on("SIGTERM", () => gracefulShutdown(server));
+                ["SIGINT", "SIGTERM"].forEach(signal => {
+                    process.on(signal, () => __awaiter(this, void 0, void 0, function* () {
+                        console.log(chalk_1.default.yellow(`⚠️ Received ${signal}, shutting down gracefully...`));
+                        yield gracefulShutdown(server);
+                    }));
+                });
             }));
         }
         catch (error) {
-            console.error(error);
+            console.error(chalk_1.default.red("❌ Fatal error during application startup:"), error);
         }
     });
 }
-const gracefulShutdown = (server) => {
-    console.log(chalk_1.default.yellow("\n👋 Bye-bye! See you soon!"));
+const gracefulShutdown = (server) => __awaiter(void 0, void 0, void 0, function* () {
+    const ora = yield loadOra();
+    const gradient = yield loadGradient();
+    const boxen = yield loadBoxen();
+    const shutdownSpinner = ora({
+        text: gradient.passion("👋 Preparing for shutdown..."),
+        spinner: "earth",
+    }).start();
+    shutdownSpinner.succeed(gradient.rainbow("✨ Almost done, cleaning up resources..."));
     server.close(() => {
-        console.log(chalk_1.default.magenta("💥 Server has been shut down gracefully."));
+        console.log(boxen(gradient.pastel(`
+💥 Server has been shut down gracefully.
+🔌 All connections closed. See you next time!
+🚀 Keep building amazing things!`), {
+            padding: 1,
+            margin: 1,
+            borderStyle: "double",
+            borderColor: "magenta",
+            align: "left",
+        }));
+        console.log(gradient.vice("\n👋 Bye-bye! Take care, and happy coding! 🚀\n"));
         process.exit(0);
     });
     setTimeout(() => {
-        console.error(chalk_1.default.red("⏳ Forced shutdown due to timeout."));
+        console.error(boxen(gradient.cristal(`
+⏳ Forced shutdown due to timeout.
+⚠ Some processes didn't close in time!
+💀 Terminating immediately...
+                `), {
+            padding: 1,
+            margin: 1,
+            borderStyle: "bold",
+            borderColor: "red",
+            align: "left",
+        }));
         process.exit(1);
     }, 5000);
-};
+});
 //# sourceMappingURL=index.js.map
