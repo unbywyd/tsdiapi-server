@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1-alpha.5",
+  "version": "0.0.1-alpha.6",
   "name": "@tsdiapi/server",
   "description": "A modular API server built with TypeScript, Express, and TypeDI",
   "main": "output/index.js",
@@ -36,7 +36,6 @@
     "helmet": "^8.0.0",
     "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
-    "open": "8.4",
     "ora": "^8.2.0",
     "routing-controllers": "^0.10.4",
     "routing-controllers-openapi": "^4.0.0",

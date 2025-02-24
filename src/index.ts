@@ -30,7 +30,6 @@ import helmetOptions from './config/helmet.config';
 import chalk from 'chalk';
 export * from './types';
 import type { SchemaObject } from 'openapi3-ts';
-import open from 'open';
 import figlet from "figlet";
 export * as jsonschema from './modules/jsonschema';
 
@@ -270,11 +269,6 @@ export async function createApp(options?: CreateAppOptions) {
                         )
                     );
 
-                    open(`http://${appHost}:${appPort}${baseDir}`).then(() => {
-                        logger.info("📖 Documentation opened in browser!");
-                    }).catch(() => {
-                        console.log(chalk.yellow("📖 Documentation can be opened in browser at:"), chalk.blue(`http://${appHost}:${appPort}${baseDir}`));
-                    });
                     if (options?.afterStart) {
                         try {
                             await options.afterStart(context);

@@ -81,7 +81,6 @@ exports.Container = typedi_1.default;
 const helmet_config_1 = __importDefault(require("./config/helmet.config"));
 const chalk_1 = __importDefault(require("chalk"));
 __exportStar(require("./types"), exports);
-const open_1 = __importDefault(require("open"));
 const figlet_1 = __importDefault(require("figlet"));
 exports.jsonschema = __importStar(require("./modules/jsonschema"));
 function loadGradient() {
@@ -277,11 +276,6 @@ function createApp(options) {
                         console.log(boxen(`${chalk_1.default.green("🚀")} ${chalk_1.default.green("Server started successfully!")}\n` +
                             `${chalk_1.default.cyan("🌍 Server is running at:")} ${chalk_1.default.green(serverUrl)}\n` +
                             `${chalk_1.default.cyan("📖 API Docs:")} ${chalk_1.default.green(docsUrl)}`, { padding: 1, borderColor: "cyan", align: "left" }));
-                        (0, open_1.default)(`http://${appHost}:${appPort}${baseDir}`).then(() => {
-                            logger_1.logger.info("📖 Documentation opened in browser!");
-                        }).catch(() => {
-                            console.log(chalk_1.default.yellow("📖 Documentation can be opened in browser at:"), chalk_1.default.blue(`http://${appHost}:${appPort}${baseDir}`));
-                        });
                         if (options === null || options === void 0 ? void 0 : options.afterStart) {
                             try {
                                 yield options.afterStart(context);
