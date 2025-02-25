@@ -84,6 +84,22 @@ export async function createApp(options?: CreateAppOptions) {
             ...appOptions.expressStaticOptions || {}
         };
 
+        const appPort = getConfig('PORT', 3100);
+        const appName = getConfig('NAME', 'App');
+        const appHost = getConfig('HOST', 'localhost');
+        const appVersion = getConfig('VERSION', '1.0.0');
+
+        appOptions['appName'] = appName;
+        appOptions['appVersion'] = appVersion;
+        appOptions['appPort'] = appPort;
+        appOptions['appHost'] = appHost;
+
+        let apiPrefix = getConfig('API_PREFIX', '/api/');
+        if (!apiPrefix?.endsWith('/')) {
+            apiPrefix = apiPrefix + '/';
+        }
+        appOptions['apiPrefix'] = apiPrefix;
+
         const app: express.Application = express();
         const context: AppContext = {
             app,
@@ -134,17 +150,6 @@ export async function createApp(options?: CreateAppOptions) {
                 console.error(`OnInit error:`, error);
                 process.exit(1);
             }
-        }
-
-        let apiPrefix = getConfig('API_PREFIX', '/api/');
-        const appPort = getConfig('PORT', 3100);
-        const appName = getConfig('NAME', 'App');
-        const appHost = getConfig('HOST', 'localhost');
-        const appVersion = getConfig('VERSION', '1.0.0');
-
-
-        if (!apiPrefix?.endsWith('/')) {
-            apiPrefix = apiPrefix + '/';
         }
 
 
