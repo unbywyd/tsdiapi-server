@@ -176,7 +176,7 @@ function createApp(options) {
                     process.exit(1);
                 }
             }
-            const apiPrefix = (0, app_1.getConfig)('API_PREFIX', '/api');
+            const apiPrefix = (0, app_1.getConfig)('API_PREFIX', '/api/');
             const appPort = (0, app_1.getConfig)('PORT', 3100);
             const appName = (0, app_1.getConfig)('NAME', 'App');
             const appHost = (0, app_1.getConfig)('HOST', 'localhost');
@@ -200,12 +200,13 @@ function createApp(options) {
             });
             (0, routing_controllers_1.useContainer)(typedi_1.default);
             (0, morgan_1.loadMorganModule)(app, logger_1.logger);
+            const prefixWithSlash = apiPrefix.endsWith("/") ? apiPrefix : apiPrefix + "/";
             (0, routing_controllers_1.useExpressServer)(app, {
                 validation: { stopAtFirstError: true, whitelist: true },
                 cors: appOptions.corsOptions,
                 classTransformer: true,
                 defaultErrorHandler: false,
-                routePrefix: apiPrefix,
+                routePrefix: prefixWithSlash,
                 controllers: [app_1.AppDir + server_config_1.default.globControllersPath],
                 middlewares: [
                     app_1.AppDir + '/app/middlewares/**/*.middleware.ts',

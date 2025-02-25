@@ -136,7 +136,7 @@ export async function createApp(options?: CreateAppOptions) {
             }
         }
 
-        const apiPrefix = getConfig('API_PREFIX', '/api');
+        const apiPrefix = getConfig('API_PREFIX', '/api/');
         const appPort = getConfig('PORT', 3100);
         const appName = getConfig('NAME', 'App');
         const appHost = getConfig('HOST', 'localhost');
@@ -170,12 +170,13 @@ export async function createApp(options?: CreateAppOptions) {
         routingControllersUseContainer(Container);
         loadMorganModule(app, logger);
 
+        const prefixWithSlash = apiPrefix.endsWith("/") ? apiPrefix : apiPrefix + "/";
         useExpressServer(app, {
             validation: { stopAtFirstError: true, whitelist: true },
             cors: appOptions.corsOptions,
             classTransformer: true,
             defaultErrorHandler: false,
-            routePrefix: apiPrefix,
+            routePrefix: prefixWithSlash,
             controllers: [AppDir + serverOptions.globControllersPath],
             middlewares: [
                 AppDir + '/app/middlewares/**/*.middleware.ts',
