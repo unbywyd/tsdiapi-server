@@ -74,7 +74,7 @@ const morgan_1 = require("./modules/morgan");
 const helmet_1 = require("./modules/helmet");
 const http_1 = require("http");
 const swaggerUiExpress = __importStar(require("swagger-ui-express"));
-const file_loader_1 = __importDefault(require("./modules/file-loader"));
+const file_loader_1 = __importStar(require("./modules/file-loader"));
 const routing_controllers_openapi_extra_1 = require("routing-controllers-openapi-extra");
 const typedi_1 = __importDefault(require("typedi"));
 exports.Container = typedi_1.default;
@@ -82,6 +82,7 @@ const helmet_config_1 = __importDefault(require("./config/helmet.config"));
 const chalk_1 = __importDefault(require("chalk"));
 __exportStar(require("./types"), exports);
 const figlet_1 = __importDefault(require("figlet"));
+const error_handler_middleware_1 = require("./middlewares/error-handler.middleware");
 exports.jsonschema = __importStar(require("./modules/jsonschema"));
 function loadGradient() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -154,6 +155,7 @@ function createApp(options) {
             // First load all the services
             const servicesPath = app_1.AppDir + server_config_1.default.globServicesPath;
             yield (0, file_loader_1.default)(servicesPath, true);
+            typedi_1.default.get(error_handler_middleware_1.CustomErrorHandler);
             if ((options === null || options === void 0 ? void 0 : options.plugins) && options.plugins.length > 0) {
                 for (const plugin of options.plugins) {
                     if (plugin) {
@@ -208,6 +210,7 @@ function createApp(options) {
             });
             (0, routing_controllers_1.useContainer)(typedi_1.default);
             (0, morgan_1.loadMorganModule)(app, logger_1.logger);
+            const packageMiddlewares = path_1.default.join((0, file_loader_1.getAppPath)(), 'middlewares/**/*.middleware.ts');
             (0, routing_controllers_1.useExpressServer)(app, {
                 validation: { stopAtFirstError: true, whitelist: true },
                 cors: appOptions.corsOptions,
@@ -216,6 +219,7 @@ function createApp(options) {
                 routePrefix: apiPrefix,
                 controllers: [app_1.AppDir + server_config_1.default.globControllersPath],
                 middlewares: [
+                    packageMiddlewares,
                     app_1.AppDir + '/app/middlewares/**/*.middleware.ts',
                     app_1.AppDir + server_config_1.default.globMiddlewaresPath
                 ],

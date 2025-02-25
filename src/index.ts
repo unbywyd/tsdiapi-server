@@ -22,7 +22,7 @@ import { loadMorganModule } from './modules/morgan';
 import { loadHelmetModule } from './modules/helmet';
 import { createServer, Server } from 'http'
 import * as swaggerUiExpress from 'swagger-ui-express'
-import fileLoader from './modules/file-loader'
+import fileLoader, { getAppPath } from './modules/file-loader'
 import { AsyncResolver } from 'routing-controllers-openapi-extra';
 import Container from 'typedi';
 import { AppContext, AppOptions, AppPlugin, CreateAppOptions } from './types';
@@ -31,6 +31,7 @@ import chalk from 'chalk';
 export * from './types';
 import type { SchemaObject } from 'openapi3-ts';
 import figlet from "figlet";
+import { CustomErrorHandler } from './middlewares/error-handler.middleware';
 export * as jsonschema from './modules/jsonschema';
 
 async function loadGradient() {
@@ -117,6 +118,7 @@ export async function createApp(options?: CreateAppOptions) {
         // First load all the services
         const servicesPath = AppDir + serverOptions.globServicesPath;
         await fileLoader(servicesPath, true);
+        Container.get(CustomErrorHandler);
 
         if (options?.plugins && options.plugins.length > 0) {
             for (const plugin of options.plugins) {
@@ -177,8 +179,11 @@ export async function createApp(options?: CreateAppOptions) {
             res.status(404).send({ status: 404, message: "Page Not Found!" });
         });
 
+
         routingControllersUseContainer(Container);
         loadMorganModule(app, logger);
+
+        const packageMiddlewares = path.join(getAppPath(), 'middlewares/**/*.middleware.ts');
 
         useExpressServer(app, {
             validation: { stopAtFirstError: true, whitelist: true },
@@ -188,6 +193,7 @@ export async function createApp(options?: CreateAppOptions) {
             routePrefix: apiPrefix,
             controllers: [AppDir + serverOptions.globControllersPath],
             middlewares: [
+                packageMiddlewares,
                 AppDir + '/app/middlewares/**/*.middleware.ts',
                 AppDir + serverOptions.globMiddlewaresPath
             ],
