@@ -125,6 +125,19 @@ function createApp(options) {
             appOptions.helmetOptions = Object.assign(Object.assign({}, appDefaultOptions.helmetOptions), appOptions.helmetOptions || {});
             appOptions.corsOptions = Object.assign(Object.assign({}, appDefaultOptions.corsOptions), appOptions.corsOptions || {});
             appOptions.expressStaticOptions = Object.assign(Object.assign({}, appDefaultOptions.expressStaticOptions), appOptions.expressStaticOptions || {});
+            const appPort = (0, app_1.getConfig)('PORT', 3100);
+            const appName = (0, app_1.getConfig)('NAME', 'App');
+            const appHost = (0, app_1.getConfig)('HOST', 'localhost');
+            const appVersion = (0, app_1.getConfig)('VERSION', '1.0.0');
+            appOptions['appName'] = appName;
+            appOptions['appVersion'] = appVersion;
+            appOptions['appPort'] = appPort;
+            appOptions['appHost'] = appHost;
+            let apiPrefix = (0, app_1.getConfig)('API_PREFIX', '/api/');
+            if (!(apiPrefix === null || apiPrefix === void 0 ? void 0 : apiPrefix.endsWith('/'))) {
+                apiPrefix = apiPrefix + '/';
+            }
+            appOptions['apiPrefix'] = apiPrefix;
             const app = (0, express_1.default)();
             const context = {
                 app,
@@ -175,14 +188,6 @@ function createApp(options) {
                     console.error(`OnInit error:`, error);
                     process.exit(1);
                 }
-            }
-            let apiPrefix = (0, app_1.getConfig)('API_PREFIX', '/api/');
-            const appPort = (0, app_1.getConfig)('PORT', 3100);
-            const appName = (0, app_1.getConfig)('NAME', 'App');
-            const appHost = (0, app_1.getConfig)('HOST', 'localhost');
-            const appVersion = (0, app_1.getConfig)('VERSION', '1.0.0');
-            if (!(apiPrefix === null || apiPrefix === void 0 ? void 0 : apiPrefix.endsWith('/'))) {
-                apiPrefix = apiPrefix + '/';
             }
             (0, helmet_1.loadHelmetModule)(app, appOptions.helmetOptions);
             app.use((0, cors_1.default)(appOptions.corsOptions));
