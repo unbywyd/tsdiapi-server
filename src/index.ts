@@ -183,8 +183,7 @@ export async function createApp(options?: CreateAppOptions) {
         routingControllersUseContainer(Container);
         loadMorganModule(app, logger);
 
-        const packageMiddlewares = path.join(getAppPath(), 'middlewares/**/*.middleware.ts');
-
+        const packageMiddlewares = getAppPath() + '/middlewares/**/*.middleware{.ts,.js}';
         useExpressServer(app, {
             validation: { stopAtFirstError: true, whitelist: true },
             cors: appOptions.corsOptions,
@@ -194,7 +193,7 @@ export async function createApp(options?: CreateAppOptions) {
             controllers: [AppDir + serverOptions.globControllersPath],
             middlewares: [
                 packageMiddlewares,
-                AppDir + '/app/middlewares/**/*.middleware.ts',
+                AppDir + '/app/middlewares/**/*.middleware{.ts,.js}',
                 AppDir + serverOptions.globMiddlewaresPath
             ],
         });
@@ -254,7 +253,7 @@ export async function createApp(options?: CreateAppOptions) {
                 { routePrefix: apiPrefix },
                 {
                     components: {
-                        schemas: schemas,
+                        schemas: schemas as any,
                         ...(appOptions.swaggerOptions?.securitySchemes ? { securitySchemes: appOptions.swaggerOptions.securitySchemes } : {}),
                     },
 
