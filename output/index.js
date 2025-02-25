@@ -210,7 +210,7 @@ function createApp(options) {
             });
             (0, routing_controllers_1.useContainer)(typedi_1.default);
             (0, morgan_1.loadMorganModule)(app, logger_1.logger);
-            const packageMiddlewares = path_1.default.join((0, file_loader_1.getAppPath)(), 'middlewares/**/*.middleware.ts');
+            const packageMiddlewares = (0, file_loader_1.getAppPath)() + '/middlewares/**/*.middleware{.ts,.js}';
             (0, routing_controllers_1.useExpressServer)(app, {
                 validation: { stopAtFirstError: true, whitelist: true },
                 cors: appOptions.corsOptions,
@@ -220,7 +220,7 @@ function createApp(options) {
                 controllers: [app_1.AppDir + server_config_1.default.globControllersPath],
                 middlewares: [
                     packageMiddlewares,
-                    app_1.AppDir + '/app/middlewares/**/*.middleware.ts',
+                    app_1.AppDir + '/app/middlewares/**/*.middleware{.ts,.js}',
                     app_1.AppDir + server_config_1.default.globMiddlewaresPath
                 ],
             });
