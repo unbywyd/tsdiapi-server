@@ -32,4 +32,8 @@ export const helmetOptions: HelmetOptions = {
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }
 
-export default helmetOptions;
+const getHelmetOptions = async () => {
+    return helmetOptions;
+}
+
+export default getHelmetOptions;

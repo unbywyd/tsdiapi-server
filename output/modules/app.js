@@ -32,132 +32,152 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.IsDevelopment = exports.IsProduction = exports.environment = exports.AppRoot = exports.AppDir = exports.AppConfig = exports.getConfig = exports.createAppConfig = exports.initAppModule = exports.getRootDir = void 0;
+exports.App = void 0;
 const dotenv = __importStar(require("dotenv"));
 const class_transformer_1 = require("class-transformer");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const module_alias_1 = __importDefault(require("module-alias"));
-let AppDir = null;
-exports.AppDir = AppDir;
-let AppRoot = null;
-exports.AppRoot = AppRoot;
-let environment = 'development';
-exports.environment = environment;
-let IsProduction = false;
-exports.IsProduction = IsProduction;
-let IsDevelopment = false;
-exports.IsDevelopment = IsDevelopment;
-const getEnvFile = (baseDir) => {
-    const fp = path_1.default.resolve(baseDir, `.env.${process.env.NODE_ENV}`);
-    if (fs_1.default.existsSync(fp)) {
-        return fp;
+class AppModule {
+    constructor() {
+        this.appDir = null;
+        this.appRoot = null;
+        this.environment = 'development';
+        this.isProduction = false;
+        this.isDevelopment = false;
+        this.appConfig = null;
+        this.initialized = false;
+        this.alias = {
+            '@base': '',
+            '@api': '/api',
+            '@features': '/api/features',
+        };
     }
-    const fpDefault = path_1.default.resolve(baseDir, '.env');
-    if (fs_1.default.existsSync(fpDefault)) {
-        console.log(`Environment file not found: ${fp}. Using default: ${fpDefault}`);
-        return fpDefault;
+    getEnvFile(baseDir) {
+        const envFilePath = path_1.default.resolve(baseDir, `.env.${process.env.NODE_ENV}`);
+        if (fs_1.default.existsSync(envFilePath))
+            return envFilePath;
+        const defaultEnvFilePath = path_1.default.resolve(baseDir, '.env');
+        if (fs_1.default.existsSync(defaultEnvFilePath)) {
+            console.log(`Environment file not found: ${envFilePath}. Using default: ${defaultEnvFilePath}`);
+            return defaultEnvFilePath;
+        }
+        return null;
     }
-    return null;
-};
-const alias = {
-    '@base': '',
-    '@api': '/api',
-    "@features": "/api/features",
-};
-function fixModuleAlias(dirName) {
-    const newAlias = Object.keys(alias).reduce((acc, key) => {
-        const _acc = acc;
-        const _alias = alias;
-        _acc[key] = dirName + _alias[key];
-        return acc;
-    }, {});
-    module_alias_1.default.addAliases(newAlias);
-}
-const getRootDir = (cwd) => {
-    return IsProduction ? path_1.default.join(cwd, 'dist') : path_1.default.join(cwd, 'src');
-};
-exports.getRootDir = getRootDir;
-const initAppModule = (options) => {
-    exports.environment = environment = process.env.NODE_ENV || 'development';
-    exports.IsProduction = IsProduction = environment === 'production';
-    exports.IsDevelopment = IsDevelopment = environment === 'development';
-    exports.AppDir = AppDir = (0, exports.getRootDir)(options.appCwd);
-    exports.AppRoot = AppRoot = options.appCwd;
-    fixModuleAlias(AppDir);
-    const envFile = getEnvFile(AppRoot);
-    if (envFile) {
-        dotenv.config({
-            path: envFile,
-        });
+    fixModuleAlias(dirName) {
+        const newAlias = Object.entries(this.alias).reduce((acc, [key, value]) => {
+            acc[key] = dirName + value;
+            return acc;
+        }, {});
+        module_alias_1.default.addAliases(newAlias);
     }
-    else {
-        console.warn(`Environment file not found: ${envFile}`);
+    getRootDir(cwd) {
+        return this.isProduction ? path_1.default.join(cwd, 'dist') : path_1.default.join(cwd, 'src');
     }
-    const configAppFile = path_1.default.resolve(AppDir, IsDevelopment ? 'app.config.ts' : 'app.config.js');
-    if (fs_1.default.existsSync(configAppFile)) {
-        try {
-            // Синхронный импорт через require
-            const module = require(configAppFile);
-            const ConfigSchema = module.default;
-            if (ConfigSchema) {
-                (0, exports.createAppConfig)(ConfigSchema);
+    initialize(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.initialized)
+                return;
+            this.environment = process.env.NODE_ENV || 'development';
+            this.isProduction = this.environment === 'production';
+            this.isDevelopment = this.environment === 'development';
+            this.appRoot = options.appCwd;
+            this.appDir = this.getRootDir(options.appCwd);
+            this.fixModuleAlias(this.appDir);
+            const envFile = this.getEnvFile(this.appRoot);
+            if (envFile) {
+                dotenv.config({ path: envFile });
             }
             else {
-                console.warn(`ConfigSchema not found in: ${configAppFile}`);
-                (0, exports.createAppConfig)();
+                console.warn(`Environment file not found: ${envFile}`);
             }
-        }
-        catch (error) {
-            console.error(`Error loading config file: ${configAppFile}`, error);
-        }
+            yield this.loadConfig();
+            this.initialized = true;
+        });
     }
-    else {
-        console.warn(`App config file not found: ${configAppFile}`);
-        (0, exports.createAppConfig)();
+    getAppConfig() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.appConfig) {
+                yield this.loadConfig();
+            }
+            return this.appConfig;
+        });
     }
-};
-exports.initAppModule = initAppModule;
-const _prepareEnv = (env) => {
-    var _a;
-    const envData = Object.assign({}, env);
-    for (const key in envData) {
-        const value = (_a = envData[key]) === null || _a === void 0 ? void 0 : _a.trim();
-        if (value === 'true') {
-            envData[key] = true;
-        }
-        else if (value === 'false') {
-            envData[key] = false;
-        }
-        else if (value === 'null') {
-            envData[key] = null;
-        }
-        else if (value === 'undefined') {
-            envData[key] = undefined;
-        }
+    loadConfig() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.appConfig)
+                return;
+            const configAppFile = path_1.default.resolve(this.appDir, this.isDevelopment ? 'app.config.ts' : 'app.config.js');
+            if (fs_1.default.existsSync(configAppFile)) {
+                try {
+                    const module = yield Promise.resolve(`${configAppFile}`).then(s => __importStar(require(s)));
+                    const ConfigSchema = module.default;
+                    this.appConfig = ConfigSchema ? this.createAppConfig(ConfigSchema) : this.createAppConfig();
+                }
+                catch (error) {
+                    console.error(`Error loading config file: ${configAppFile}`, error);
+                }
+            }
+            else {
+                console.warn(`App config file not found: ${configAppFile}`);
+                this.appConfig = this.createAppConfig();
+            }
+        });
     }
-    return envData;
-};
-let AppConfig = null;
-exports.AppConfig = AppConfig;
-const createAppConfig = (ConfigSchema) => {
-    if (!ConfigSchema) {
-        exports.AppConfig = AppConfig = _prepareEnv(process.env || {});
-        return AppConfig;
+    _prepareEnv(env) {
+        var _a;
+        const envData = Object.assign({}, env);
+        for (const key in envData) {
+            const value = (_a = envData[key]) === null || _a === void 0 ? void 0 : _a.trim();
+            if (value === 'true')
+                envData[key] = true;
+            else if (value === 'false')
+                envData[key] = false;
+            else if (value === 'null')
+                envData[key] = null;
+            else if (value === 'undefined')
+                envData[key] = undefined;
+        }
+        return envData;
     }
-    exports.AppConfig = AppConfig = (0, class_transformer_1.plainToClass)(ConfigSchema, _prepareEnv(process.env || {}), {
-        excludeExtraneousValues: true,
-        exposeDefaultValues: true,
-    });
-    return AppConfig;
-};
-exports.createAppConfig = createAppConfig;
-const getConfig = (key, defaultValue) => {
-    return AppConfig[key] !== undefined ? AppConfig[key] : defaultValue;
-};
-exports.getConfig = getConfig;
+    createAppConfig(ConfigSchema) {
+        if (!ConfigSchema) {
+            return (this.appConfig = this._prepareEnv(process.env || {}));
+        }
+        return (this.appConfig = (0, class_transformer_1.plainToClass)(ConfigSchema, this._prepareEnv(process.env || {}), {
+            excludeExtraneousValues: true,
+            exposeDefaultValues: true,
+        }));
+    }
+    getConfig(key, defaultValue) {
+        var _a;
+        return ((_a = this.appConfig) === null || _a === void 0 ? void 0 : _a[key]) !== undefined ? this.appConfig[key] : defaultValue;
+    }
+    getAppDir() {
+        return this.appDir;
+    }
+    getAppRoot() {
+        return this.appRoot;
+    }
+    isProd() {
+        return this.isProduction;
+    }
+    isDev() {
+        return this.isDevelopment;
+    }
+}
+exports.App = new AppModule();
 //# sourceMappingURL=app.js.map

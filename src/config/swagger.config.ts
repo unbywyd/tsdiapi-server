@@ -4,8 +4,13 @@ export type SwaggerOptions = {
     baseDir: string;
     securitySchemes?: OpenAPIObject['components']['securitySchemes'];
 }
+
 const config = {
     baseDir: '/docs'
 } as SwaggerOptions;
 
-export default config;
+const getSwaggerOptions = async () => {
+    return config;
+}
+
+export default getSwaggerOptions;

@@ -6,7 +6,7 @@ import {
 import * as express from "express";
 import { Service } from "typedi";
 import { IResponseError } from "routing-controllers-openapi-extra";
-import { IsDevelopment } from "../modules/app";
+import { App } from "../modules/app";
 
 export function toSlug(str: string) {
     return str
@@ -25,6 +25,7 @@ export class CustomErrorHandler implements ExpressErrorMiddlewareInterface {
         res: express.Response,
         next: express.NextFunction
     ) {
+        const IsDevelopment = App.isDevelopment;
         // Если заголовки уже отправлены, пропускаем
         if (res.headersSent) {
             return next();

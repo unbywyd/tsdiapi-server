@@ -1,19 +1,19 @@
 import path from "path";
 import winston from "winston";
 import fs from "fs";
-import { AppRoot } from "./app";
+import { App } from "./app";
 
 type LoggerOptions = {
     baseDir: string;
     winstonOptions?: winston.LoggerOptions;
 };
-// Ленивая инициализация через Singleton
 class LoggerSingleton {
     private static instance: winston.Logger;
 
-    private constructor() { } // Запрещаем создание через new
+    private constructor() { }
 
-    public static getInstance(config: LoggerOptions): winston.Logger {
+    public static async getInstance(config: LoggerOptions): Promise<winston.Logger> {
+        await App.getAppConfig();
         if (!LoggerSingleton.instance) {
             const logFormat = winston.format.combine(
                 winston.format.colorize(),
@@ -23,8 +23,7 @@ class LoggerSingleton {
                 })
             );
 
-            const logsdir = path.join(AppRoot, config.baseDir);
-
+            const logsdir = path.join(App.appRoot, config.baseDir);
             const errorLogPath = path.join(logsdir, "error.log");
             const combinedLogPath = path.join(logsdir, "combined.log");
 
@@ -54,10 +53,8 @@ class LoggerSingleton {
 
 let logger = null as winston.Logger | null;
 
-// Экспортируем Singleton-инстанс
-//const logger = LoggerSingleton.getInstance();
-export function createLogger(config: LoggerOptions) {
-    logger = LoggerSingleton.getInstance(config);
+export async function createLogger(config: LoggerOptions) {
+    logger = await LoggerSingleton.getInstance(config);
     return logger;
 }
 

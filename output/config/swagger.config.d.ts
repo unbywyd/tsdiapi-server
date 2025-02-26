@@ -3,6 +3,6 @@ export type SwaggerOptions = {
     baseDir: string;
     securitySchemes?: OpenAPIObject['components']['securitySchemes'];
 };
-declare const config: SwaggerOptions;
-export default config;
+declare const getSwaggerOptions: () => Promise<SwaggerOptions>;
+export default getSwaggerOptions;
 //# sourceMappingURL=swagger.config.d.ts.map

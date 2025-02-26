@@ -22,6 +22,7 @@ function toSlug(str) {
 }
 let CustomErrorHandler = class CustomErrorHandler {
     error(error, _req, res, next) {
+        const IsDevelopment = app_1.App.isDevelopment;
         // Если заголовки уже отправлены, пропускаем
         if (res.headersSent) {
             return next();
@@ -59,7 +60,7 @@ let CustomErrorHandler = class CustomErrorHandler {
             });
         }
         // 5. Если у нас 500-я ошибка и режим разработки - добавляем stack
-        if (app_1.IsDevelopment && status === 500 && error.stack) {
+        if (IsDevelopment && status === 500 && error.stack) {
             // Приводим к any, чтобы не ломать типы
             responseError.stack = error.stack;
         }

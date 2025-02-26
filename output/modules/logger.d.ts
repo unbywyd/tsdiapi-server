@@ -4,6 +4,6 @@ type LoggerOptions = {
     winstonOptions?: winston.LoggerOptions;
 };
 declare let logger: winston.Logger | null;
-export declare function createLogger(config: LoggerOptions): winston.Logger;
+export declare function createLogger(config: LoggerOptions): Promise<winston.Logger>;
 export { logger };
 //# sourceMappingURL=logger.d.ts.map

@@ -1,4 +1,5 @@
 import type { HelmetOptions } from "helmet";
 export declare const helmetOptions: HelmetOptions;
-export default helmetOptions;
+declare const getHelmetOptions: () => Promise<HelmetOptions>;
+export default getHelmetOptions;
 //# sourceMappingURL=helmet.config.d.ts.map

@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1-alpha.15",
+  "version": "0.0.1-alpha.16",
   "name": "@tsdiapi/server",
   "description": "A modular API server built with TypeScript, Express, and TypeDI",
   "main": "output/index.js",
@@ -25,7 +25,7 @@
     "@types/node": "^22.10.5",
     "@types/swagger-ui-express": "^4.1.7",
     "boxen": "^8.0.1",
-    "chalk": "^4.1.2",
+    "chalk": "^5.4.1",
     "class-validator-jsonschema": "^5.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -36,10 +36,10 @@
     "helmet": "^8.0.0",
     "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
-    "ora": "^8.2.0",
     "openapi3-ts": "^4.4.0",
+    "ora": "^8.2.0",
     "routing-controllers": "^0.10.4",
-    "routing-controllers-openapi": "^4.0.0",
+    "routing-controllers-openapi": "^4.1.0",
     "routing-controllers-openapi-extra": "^1.0.2",
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.17.0"
