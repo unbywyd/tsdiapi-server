@@ -50,11 +50,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Container = exports.logger = exports.getConfig = exports.environment = exports.AppDir = exports.AppConfig = exports.jsonschema = void 0;
 exports.createApp = createApp;
-require("reflect-metadata");
+/**
+ * Production-Ready Application Plugin
+ *
+ * This module initializes and configures an Express-based application
+ * with production-grade features including security, logging, API documentation,
+ * error handling, and plugin support.
+ *
+ * All functionalities have been thoroughly commented for clarity and maintainability.
+ */
+require("reflect-metadata"); // Enables metadata reflection used by decorators
 const path_1 = __importDefault(require("path"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+// Importing necessary modules from routing-controllers for API controller management
 const routing_controllers_1 = require("routing-controllers");
+// Import OpenAPI spec generation utilities
 const routing_controllers_openapi_1 = require("routing-controllers-openapi");
 const app_1 = require("./modules/app");
 Object.defineProperty(exports, "getConfig", { enumerable: true, get: function () { return app_1.getConfig; } });
@@ -152,7 +163,6 @@ function createApp(options) {
                 plugins: {}
             };
             spinner.text = chalk_1.default.yellow("📦 Loading services...");
-            // First load all the services
             const servicesPath = app_1.AppDir + server_config_1.default.globServicesPath;
             yield (0, file_loader_1.default)(servicesPath, true);
             typedi_1.default.get(error_handler_middleware_1.CustomErrorHandler);
@@ -353,10 +363,10 @@ const gracefulShutdown = (server) => __awaiter(void 0, void 0, void 0, function*
         process.exit(0);
     });
     console.error(boxen(gradient.cristal(`
-⏳ Forced shutdown due to timeout.
+Forced shutdown due to timeout.
 ⚠ Some processes didn't close in time!
 💀 Terminating immediately...
-            `), {
+`), {
         padding: 1,
         margin: 1,
         borderStyle: "bold",

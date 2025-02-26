@@ -5,7 +5,7 @@ import type { Server } from "http";
 import type { Container } from "typedi";
 import type { Logger } from "winston";
 import type { MetadataArgsStorage } from 'routing-controllers';
-import type { SchemaObject } from 'openapi3-ts';
+import type { SchemaObject } from 'openapi3-ts/oas31';
 
 export interface AppContext<T = any> {
     appDir: string;

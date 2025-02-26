@@ -1,7 +1,7 @@
-import * as oa from 'openapi3-ts';
+import { OpenAPIObject } from "openapi3-ts/dist/oas30";
 export type SwaggerOptions = {
     baseDir: string;
-    securitySchemes?: oa.OpenAPIObject['components']['securitySchemes'];
+    securitySchemes?: OpenAPIObject['components']['securitySchemes'];
 };
 declare const config: SwaggerOptions;
 export default config;

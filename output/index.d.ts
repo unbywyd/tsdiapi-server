@@ -1,3 +1,12 @@
+/**
+ * Production-Ready Application Plugin
+ *
+ * This module initializes and configures an Express-based application
+ * with production-grade features including security, logging, API documentation,
+ * error handling, and plugin support.
+ *
+ * All functionalities have been thoroughly commented for clarity and maintainability.
+ */
 import 'reflect-metadata';
 import { getConfig, environment, AppConfig, AppDir } from "./modules/app";
 import { logger } from './modules/logger';

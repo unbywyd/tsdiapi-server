@@ -42,7 +42,7 @@ import { AppContext, AppOptions, AppPlugin, CreateAppOptions } from './types';
 import helmetOptions from './config/helmet.config';
 import chalk from 'chalk';
 export * from './types';
-import type { SchemaObject } from 'openapi3-ts';
+import type { SchemaObject } from 'openapi3-ts/oas31';
 import figlet from "figlet";
 import { CustomErrorHandler } from './middlewares/error-handler.middleware';
 export * as jsonschema from './modules/jsonschema';
