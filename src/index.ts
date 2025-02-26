@@ -1,13 +1,26 @@
-import 'reflect-metadata';
+/**
+ * Production-Ready Application Plugin
+ *
+ * This module initializes and configures an Express-based application
+ * with production-grade features including security, logging, API documentation,
+ * error handling, and plugin support.
+ *
+ * All functionalities have been thoroughly commented for clarity and maintainability.
+ */
+import 'reflect-metadata'; // Enables metadata reflection used by decorators
 import type { HelmetOptions } from 'helmet';
 import path from 'path';
 import express from 'express'
 import cors from 'cors';
+
+// Importing necessary modules from routing-controllers for API controller management
 import {
     getMetadataArgsStorage,
     useContainer as routingControllersUseContainer,
     useExpressServer,
-} from 'routing-controllers'
+} from 'routing-controllers';
+
+// Import OpenAPI spec generation utilities
 import { routingControllersToSpec } from 'routing-controllers-openapi'
 import { initAppModule, getConfig, environment, AppConfig, AppDir } from "./modules/app";
 initAppModule({
@@ -115,7 +128,6 @@ export async function createApp(options?: CreateAppOptions) {
         }
 
         spinner.text = chalk.yellow("📦 Loading services...");
-        // First load all the services
         const servicesPath = AppDir + serverOptions.globServicesPath;
         await fileLoader(servicesPath, true);
         Container.get(CustomErrorHandler);
@@ -359,10 +371,10 @@ const gracefulShutdown = async (server: Server) => {
     console.error(
         boxen(
             gradient.cristal(`
-⏳ Forced shutdown due to timeout.
+Forced shutdown due to timeout.
 ⚠ Some processes didn't close in time!
 💀 Terminating immediately...
-            `),
+`),
             {
                 padding: 1,
                 margin: 1,
