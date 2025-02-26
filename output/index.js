@@ -9,12 +9,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.App = void 0;
+exports.AppConfig = exports.App = void 0;
 exports.createApp = createApp;
 const init_1 = require("./init");
 const app_1 = require("./modules/app");
 var app_2 = require("./modules/app");
 Object.defineProperty(exports, "App", { enumerable: true, get: function () { return app_2.App; } });
+// Fix for previous versions
+const AppConfig = app_1.App.appConfig;
+exports.AppConfig = AppConfig;
 function createApp(options) {
     return __awaiter(this, void 0, void 0, function* () {
         app_1.App.initialize({

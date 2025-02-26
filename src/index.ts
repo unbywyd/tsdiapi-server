@@ -3,6 +3,11 @@ import { App } from "./modules/app";
 import { CreateAppOptions } from "./types";
 
 export { App } from './modules/app';
+
+// Fix for previous versions
+const AppConfig = App.appConfig;
+export { AppConfig };
+
 export type * from './types';
 
 export async function createApp(options?: CreateAppOptions) {
