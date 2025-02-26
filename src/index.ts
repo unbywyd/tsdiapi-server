@@ -253,7 +253,7 @@ export async function createApp(options?: CreateAppOptions) {
                 { routePrefix: apiPrefix },
                 {
                     components: {
-                        schemas: schemas as any,
+                        schemas: schemas,
                         ...(appOptions.swaggerOptions?.securitySchemes ? { securitySchemes: appOptions.swaggerOptions.securitySchemes } : {}),
                     },
 
