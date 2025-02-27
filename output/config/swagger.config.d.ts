@@ -1,7 +1,6 @@
-import { OpenAPIObject } from "openapi3-ts/dist/oas30";
 export type SwaggerOptions = {
     baseDir: string;
-    securitySchemes?: OpenAPIObject['components']['securitySchemes'];
+    securitySchemes?: any;
 };
 declare const getSwaggerOptions: () => Promise<SwaggerOptions>;
 export default getSwaggerOptions;

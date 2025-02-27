@@ -39,7 +39,6 @@ import fileLoader, { getAppPath } from './modules/file-loader';
 import serverOptions from './config/server.config';
 import { CustomErrorHandler } from './middlewares/error-handler.middleware';
 import { loadMorganModule } from './modules/morgan';
-import { SchemaObject } from 'openapi3-ts/dist/oas30';
 
 async function loadGradient() {
     return (await eval('import("gradient-string")')).default;
@@ -239,7 +238,7 @@ export async function initApp(options?: CreateAppOptions) {
         }
 
         process.nextTick(async () => {
-            const schemas: Record<string, SchemaObject> = validationMetadatasToSchemas({
+            const schemas = validationMetadatasToSchemas({
                 refPointerPrefix: "#/components/schemas/",
             });
 
@@ -269,7 +268,7 @@ export async function initApp(options?: CreateAppOptions) {
                 { routePrefix: apiPrefix },
                 {
                     components: {
-                        schemas: schemas,
+                        schemas: schemas as any,
                         ...(appOptions.swaggerOptions?.securitySchemes ? { securitySchemes: appOptions.swaggerOptions.securitySchemes } : {}),
                     },
 
