@@ -47,16 +47,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.jsonschema = void 0;
 exports.initApp = initApp;
-/**
- * Production-Ready Application Plugin
- *
- * This module initializes and configures an Express-based application
- * with production-grade features including security, logging, API documentation,
- * error handling, and plugin support.
- *
- * All functionalities have been thoroughly commented for clarity and maintainability.
- */
-require("reflect-metadata"); // Enables metadata reflection used by decorators
 const routing_controllers_1 = require("routing-controllers");
 const routing_controllers_openapi_1 = require("routing-controllers-openapi");
 const class_validator_jsonschema_1 = require("class-validator-jsonschema");

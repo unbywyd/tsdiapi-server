@@ -11,6 +11,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppConfig = exports.App = void 0;
 exports.createApp = createApp;
+/**
+ * Production-Ready Application Plugin
+ *
+ * This module initializes and configures an Express-based application
+ * with production-grade features including security, logging, API documentation,
+ * error handling, and plugin support.
+ *
+ * All functionalities have been thoroughly commented for clarity and maintainability.
+ */
+require("reflect-metadata"); // Enables metadata reflection used by decorators
 const init_1 = require("./init");
 const app_1 = require("./modules/app");
 var app_2 = require("./modules/app");
