@@ -5,12 +5,11 @@ import type { Server } from "http";
 import type { Container } from "typedi";
 import type { Logger } from "winston";
 import type { MetadataArgsStorage } from 'routing-controllers';
-import type { SchemaObject } from 'openapi3-ts/oas31';
 export interface AppContext<T = any> {
     appDir: string;
     apiDir: string;
     routingControllersMetaStorage?: MetadataArgsStorage | null;
-    schemas?: Record<string, SchemaObject>;
+    schemas?: Record<string, any>;
     app: Application;
     server?: Server;
     container: typeof Container;
