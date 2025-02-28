@@ -114,7 +114,8 @@ exports.fileLoadAsText = fileLoadAsText;
  * @returns {Promise<any[]>} - An array of imported modules.
  */
 const fileLoader = (pattern_1, ...args_1) => __awaiter(void 0, [pattern_1, ...args_1], void 0, function* (pattern, setToContainer = false) {
-    const files = yield (0, glob_1.glob)(pattern, { cwd: getAppPath() });
+    const safePattern = pattern.replace(/\\/g, "/").replace(/\/+/g, "/");
+    const files = yield (0, glob_1.glob)(safePattern, { cwd: getAppPath() });
     const modules = [];
     for (const file of files) {
         const absolutePath = path_1.default.isAbsolute(file) ? file : path_1.default.join(getAppPath(), file);

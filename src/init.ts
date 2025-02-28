@@ -48,10 +48,11 @@ export async function initApp(options?: CreateAppOptions) {
     try {
         await App.getAppConfig();
         const AppDir = App.appDir;
-        const AppRoot = App.appRoot;
         const getConfig = App.getConfig.bind(App) as <T>(key: string, defaultValue?: T) => T;
         const appConfig = App.appConfig;
         const environment = App.environment;
+        const controllers = [AppDir + serverOptions.globControllersPath];
+        const middlewares = [];
         const appDefaultOptions: AppOptions = {
             appConfig,
             environment,
@@ -139,10 +140,18 @@ export async function initApp(options?: CreateAppOptions) {
                         console.error(chalk.red(`⚠️ Plugin ${plugin.name} failed to initialize: ${error.message}`));
                     }
                 }
+                if (plugin?.globControllersPath) {
+                    console.log(chalk.yellow(`Plugin "${plugin.name}" has auto-loaded controllers. The controllers will be included in the server.`));
+                    controllers.push(plugin.globControllersPath);
+                }
+                if (plugin?.globMiddlewaresPath) {
+                    console.log(chalk.yellow(`Plugin "${plugin.name}" has auto-loaded middlewares. The middlewares will be included in the server.`));
+                    middlewares.push(plugin.globMiddlewaresPath);
+                }
                 if (plugin?.bootstrapFilesGlobPath) {
                     const startedWithSlash = plugin.bootstrapFilesGlobPath.startsWith("/") ? "" : "/";
                     try {
-                        await fileLoader(AppDir + "/api/**" + startedWithSlash + plugin.bootstrapFilesGlobPath, true);
+                        await fileLoader(AppDir + path.normalize("/api/**" + startedWithSlash + plugin.bootstrapFilesGlobPath), true);
                     } catch (error) {
                         console.error(chalk.red(`⚠️ Plugin ${plugin.name} failed to load files: ${error.message}`));
                     }
@@ -195,10 +204,10 @@ export async function initApp(options?: CreateAppOptions) {
             classTransformer: true,
             defaultErrorHandler: false,
             routePrefix: apiPrefix,
-            controllers: [AppDir + serverOptions.globControllersPath],
+            controllers: controllers,
             middlewares: [
+                ...middlewares,
                 packageMiddlewares,
-                AppDir + '/app/middlewares/**/*.middleware{.ts,.js}',
                 AppDir + serverOptions.globMiddlewaresPath
             ],
         });

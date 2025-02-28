@@ -67,7 +67,8 @@ export const fileLoadAsText = async (relativePath: string): Promise<string> => {
  * @returns {Promise<any[]>} - An array of imported modules.
  */
 export const fileLoader = async (pattern: string, setToContainer: boolean = false): Promise<any[]> => {
-    const files = await glob(pattern, { cwd: getAppPath() });
+    const safePattern = pattern.replace(/\\/g, "/").replace(/\/+/g, "/");
+    const files = await glob(safePattern, { cwd: getAppPath() });
     const modules: any[] = [];
 
     for (const file of files) {

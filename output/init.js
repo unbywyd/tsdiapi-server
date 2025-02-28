@@ -96,10 +96,11 @@ function initApp(options) {
         try {
             yield app_1.App.getAppConfig();
             const AppDir = app_1.App.appDir;
-            const AppRoot = app_1.App.appRoot;
             const getConfig = app_1.App.getConfig.bind(app_1.App);
             const appConfig = app_1.App.appConfig;
             const environment = app_1.App.environment;
+            const controllers = [AppDir + server_config_1.default.globControllersPath];
+            const middlewares = [];
             const appDefaultOptions = {
                 appConfig,
                 environment,
@@ -167,10 +168,18 @@ function initApp(options) {
                             console.error(chalk.red(`⚠️ Plugin ${plugin.name} failed to initialize: ${error.message}`));
                         }
                     }
+                    if (plugin === null || plugin === void 0 ? void 0 : plugin.globControllersPath) {
+                        console.log(chalk.yellow(`Plugin "${plugin.name}" has auto-loaded controllers. The controllers will be included in the server.`));
+                        controllers.push(plugin.globControllersPath);
+                    }
+                    if (plugin === null || plugin === void 0 ? void 0 : plugin.globMiddlewaresPath) {
+                        console.log(chalk.yellow(`Plugin "${plugin.name}" has auto-loaded middlewares. The middlewares will be included in the server.`));
+                        middlewares.push(plugin.globMiddlewaresPath);
+                    }
                     if (plugin === null || plugin === void 0 ? void 0 : plugin.bootstrapFilesGlobPath) {
                         const startedWithSlash = plugin.bootstrapFilesGlobPath.startsWith("/") ? "" : "/";
                         try {
-                            yield (0, file_loader_1.default)(AppDir + "/api/**" + startedWithSlash + plugin.bootstrapFilesGlobPath, true);
+                            yield (0, file_loader_1.default)(AppDir + path_1.default.normalize("/api/**" + startedWithSlash + plugin.bootstrapFilesGlobPath), true);
                         }
                         catch (error) {
                             console.error(chalk.red(`⚠️ Plugin ${plugin.name} failed to load files: ${error.message}`));
@@ -213,10 +222,10 @@ function initApp(options) {
                 classTransformer: true,
                 defaultErrorHandler: false,
                 routePrefix: apiPrefix,
-                controllers: [AppDir + server_config_1.default.globControllersPath],
+                controllers: controllers,
                 middlewares: [
+                    ...middlewares,
                     packageMiddlewares,
-                    AppDir + '/app/middlewares/**/*.middleware{.ts,.js}',
                     AppDir + server_config_1.default.globMiddlewaresPath
                 ],
             });
