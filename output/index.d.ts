@@ -13,6 +13,7 @@ export { App } from './modules/app';
 export * from "./modules/decorators";
 export * from "./modules/response";
 export * from "./modules/utils";
+export * from "./modules/entity";
 declare const AppConfig: Record<string, any>;
 export { AppConfig };
 export type * from './types';

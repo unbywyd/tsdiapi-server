@@ -42,6 +42,7 @@ Object.defineProperty(exports, "App", { enumerable: true, get: function () { ret
 __exportStar(require("./modules/decorators"), exports);
 __exportStar(require("./modules/response"), exports);
 __exportStar(require("./modules/utils"), exports);
+__exportStar(require("./modules/entity"), exports);
 // Fix for previous versions
 const AppConfig = app_1.App.appConfig;
 exports.AppConfig = AppConfig;

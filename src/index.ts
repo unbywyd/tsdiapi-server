@@ -18,6 +18,7 @@ export { App } from './modules/app';
 export * from "./modules/decorators";
 export * from "./modules/response";
 export * from "./modules/utils";
+export * from "./modules/entity";
 
 // Fix for previous versions
 const AppConfig = App.appConfig;
