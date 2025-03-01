@@ -331,7 +331,17 @@ function initApp(options) {
                 });
                 ["SIGINT", "SIGTERM"].forEach(signal => {
                     process.on(signal, () => __awaiter(this, void 0, void 0, function* () {
-                        console.log(chalk.yellow(`⚠️ Received ${signal}, shutting down gracefully...`));
+                        console.error(boxen(gradient.cristal(`
+                👋 Forced shutdown due to timeout.
+                🔌 Some processes didn't close in time!
+                💀 Terminating immediately...
+                `), {
+                            padding: 1,
+                            margin: 1,
+                            borderStyle: "bold",
+                            borderColor: "red",
+                            align: "left",
+                        }));
                         yield gracefulShutdown(server);
                     }));
                 });
@@ -365,17 +375,6 @@ const gracefulShutdown = (server) => __awaiter(void 0, void 0, void 0, function*
         console.log(gradient.vice("\n👋 Bye-bye! Take care, and happy coding! 🚀\n"));
         process.exit(0);
     });
-    console.error(boxen(gradient.cristal(`
-👋 Forced shutdown due to timeout.
-🔌 Some processes didn't close in time!
-💀 Terminating immediately...
-`), {
-        padding: 1,
-        margin: 1,
-        borderStyle: "bold",
-        borderColor: "red",
-        align: "left",
-    }));
     process.exit(1);
 });
 //# sourceMappingURL=init.js.map

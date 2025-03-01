@@ -334,7 +334,22 @@ export async function initApp(options?: CreateAppOptions) {
 
             ["SIGINT", "SIGTERM"].forEach(signal => {
                 process.on(signal, async () => {
-                    console.log(chalk.yellow(`⚠️ Received ${signal}, shutting down gracefully...`));
+                    console.error(
+                        boxen(
+                            gradient.cristal(`
+                👋 Forced shutdown due to timeout.
+                🔌 Some processes didn't close in time!
+                💀 Terminating immediately...
+                `),
+                            {
+                                padding: 1,
+                                margin: 1,
+                                borderStyle: "bold",
+                                borderColor: "red",
+                                align: "left",
+                            }
+                        )
+                    );
                     await gracefulShutdown(server);
                 });
             });
@@ -377,22 +392,5 @@ const gracefulShutdown = async (server: Server) => {
         console.log(gradient.vice("\n👋 Bye-bye! Take care, and happy coding! 🚀\n"));
         process.exit(0);
     });
-
-    console.error(
-        boxen(
-            gradient.cristal(`
-👋 Forced shutdown due to timeout.
-🔌 Some processes didn't close in time!
-💀 Terminating immediately...
-`),
-            {
-                padding: 1,
-                margin: 1,
-                borderStyle: "bold",
-                borderColor: "red",
-                align: "left",
-            }
-        )
-    );
     process.exit(1);
 };
