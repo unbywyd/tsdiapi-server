@@ -8,7 +8,6 @@ import { routingControllersToSpec } from 'routing-controllers-openapi'
 import { validationMetadatasToSchemas } from 'class-validator-jsonschema'
 import { createServer, Server } from 'http'
 import * as swaggerUiExpress from 'swagger-ui-express'
-import { AsyncResolver } from 'prisma-class-dto-generator';
 
 import path from 'path';
 import express from 'express'
@@ -30,6 +29,7 @@ import serverOptions from './config/server.config';
 import { CustomErrorHandler } from './middlewares/error-handler.middleware';
 import { loadMorganModule } from './modules/morgan';
 import { findAvailablePort } from './modules/find-port';
+import { getSyncQueueProvider } from '@tsdiapi/syncqueue';
 
 async function loadGradient() {
     return (await eval('import("gradient-string")')).default;
@@ -212,7 +212,10 @@ export async function initApp(options?: CreateAppOptions) {
                 AppDir + serverOptions.globMiddlewaresPath
             ],
         });
-        await AsyncResolver.resolveAll();
+        const syncQueueProvider = getSyncQueueProvider();
+        await syncQueueProvider.resolveAll();
+        syncQueueProvider.clear();
+
         const server: Server = createServer(app);
 
         context.server = server;

@@ -52,7 +52,6 @@ const routing_controllers_openapi_1 = require("routing-controllers-openapi");
 const class_validator_jsonschema_1 = require("class-validator-jsonschema");
 const http_1 = require("http");
 const swaggerUiExpress = __importStar(require("swagger-ui-express"));
-const prisma_class_dto_generator_1 = require("prisma-class-dto-generator");
 const path_1 = __importDefault(require("path"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -70,6 +69,7 @@ const server_config_1 = __importDefault(require("./config/server.config"));
 const error_handler_middleware_1 = require("./middlewares/error-handler.middleware");
 const morgan_1 = require("./modules/morgan");
 const find_port_1 = require("./modules/find-port");
+const syncqueue_1 = require("@tsdiapi/syncqueue");
 function loadGradient() {
     return __awaiter(this, void 0, void 0, function* () {
         return (yield eval('import("gradient-string")')).default;
@@ -230,7 +230,9 @@ function initApp(options) {
                     AppDir + server_config_1.default.globMiddlewaresPath
                 ],
             });
-            yield prisma_class_dto_generator_1.AsyncResolver.resolveAll();
+            const syncQueueProvider = (0, syncqueue_1.getSyncQueueProvider)();
+            yield syncQueueProvider.resolveAll();
+            syncQueueProvider.clear();
             const server = (0, http_1.createServer)(app);
             context.server = server;
             if ((options === null || options === void 0 ? void 0 : options.plugins) && options.plugins.length > 0) {

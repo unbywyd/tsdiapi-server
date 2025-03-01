@@ -3,7 +3,7 @@ import { Expose } from "class-transformer";
 import { validationMetadatasToSchemas } from "class-validator-jsonschema";
 import { OpenAPI } from "routing-controllers-openapi";
 import { toSlug, toDTO } from "./utils";
-import { IsEntity } from "prisma-class-dto-generator";
+import { IsEntity } from "./entity";
 
 
 export function getOpenAPIResponse<T>(

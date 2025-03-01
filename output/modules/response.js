@@ -21,7 +21,7 @@ const class_transformer_1 = require("class-transformer");
 const class_validator_jsonschema_1 = require("class-validator-jsonschema");
 const routing_controllers_openapi_1 = require("routing-controllers-openapi");
 const utils_1 = require("./utils");
-const prisma_class_dto_generator_1 = require("prisma-class-dto-generator");
+const entity_1 = require("./entity");
 function getOpenAPIResponse(responseClass, options) {
     const isArray = (options === null || options === void 0 ? void 0 : options.isArray) || false;
     const schemas = (0, class_validator_jsonschema_1.validationMetadatasToSchemas)({
@@ -84,7 +84,7 @@ __decorate([
     __metadata("design:type", String)
 ], IResponseError.prototype, "message", void 0);
 __decorate([
-    (0, prisma_class_dto_generator_1.IsEntity)(() => IResponseErrorMessage, { each: true }),
+    (0, entity_1.IsEntity)(() => IResponseErrorMessage, { each: true }),
     __metadata("design:type", Array)
 ], IResponseError.prototype, "errors", void 0);
 __decorate([
