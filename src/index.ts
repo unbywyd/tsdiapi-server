@@ -15,6 +15,9 @@ import { App } from "./modules/app";
 import { CreateAppOptions } from "./types";
 
 export { App } from './modules/app';
+export * from "./modules/decorators";
+export * from "./modules/response";
+export * from "./modules/utils";
 
 // Fix for previous versions
 const AppConfig = App.appConfig;

@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1-alpha.22",
+  "version": "0.0.1-alpha.23",
   "name": "@tsdiapi/server",
   "description": "A modular API server built with TypeScript, Express, and TypeDI",
   "main": "output/index.js",
@@ -19,9 +19,11 @@
   "dependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/figlet": "^1.7.0",
     "@types/json-schema": "^7.0.15",
     "@types/module-alias": "^2.0.4",
     "@types/morgan": "^1.9.9",
+    "@types/multer": "^1.4.12",
     "@types/node": "^22.10.5",
     "@types/swagger-ui-express": "^4.1.7",
     "boxen": "^8.0.1",
@@ -37,12 +39,11 @@
     "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
     "ora": "^8.2.0",
+    "prisma-class-dto-generator": "^6.5.1",
     "routing-controllers": "^0.10.4",
     "routing-controllers-openapi": "^4.1.0",
-    "routing-controllers-openapi-extra": "^1.0.2",
     "swagger-ui-express": "^5.0.1",
-    "winston": "^3.17.0",
-    "@types/figlet": "^1.7.0"
+    "winston": "^3.17.0"
   },
   "author": {
     "name": "Unbywyd"
@@ -51,6 +52,7 @@
     "axios": "^1.7.9",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "multer": "^1.4.5-lts.1",
     "reflect-metadata": "^0.2.2",
     "typedi": "^0.10.0"
   },

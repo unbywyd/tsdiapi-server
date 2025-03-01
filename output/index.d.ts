@@ -10,6 +10,9 @@
 import 'reflect-metadata';
 import { CreateAppOptions } from "./types";
 export { App } from './modules/app';
+export * from "./modules/decorators";
+export * from "./modules/response";
+export * from "./modules/utils";
 declare const AppConfig: Record<string, any>;
 export { AppConfig };
 export type * from './types';

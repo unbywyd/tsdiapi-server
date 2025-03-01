@@ -8,7 +8,7 @@ import { routingControllersToSpec } from 'routing-controllers-openapi'
 import { validationMetadatasToSchemas } from 'class-validator-jsonschema'
 import { createServer, Server } from 'http'
 import * as swaggerUiExpress from 'swagger-ui-express'
-import { AsyncResolver } from 'routing-controllers-openapi-extra';
+import { AsyncResolver } from 'prisma-class-dto-generator';
 
 import path from 'path';
 import express from 'express'

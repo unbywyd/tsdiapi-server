@@ -52,7 +52,7 @@ const routing_controllers_openapi_1 = require("routing-controllers-openapi");
 const class_validator_jsonschema_1 = require("class-validator-jsonschema");
 const http_1 = require("http");
 const swaggerUiExpress = __importStar(require("swagger-ui-express"));
-const routing_controllers_openapi_extra_1 = require("routing-controllers-openapi-extra");
+const prisma_class_dto_generator_1 = require("prisma-class-dto-generator");
 const path_1 = __importDefault(require("path"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -230,7 +230,7 @@ function initApp(options) {
                     AppDir + server_config_1.default.globMiddlewaresPath
                 ],
             });
-            yield routing_controllers_openapi_extra_1.AsyncResolver.resolveAll();
+            yield prisma_class_dto_generator_1.AsyncResolver.resolveAll();
             const server = (0, http_1.createServer)(app);
             context.server = server;
             if ((options === null || options === void 0 ? void 0 : options.plugins) && options.plugins.length > 0) {

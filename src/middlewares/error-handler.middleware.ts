@@ -5,8 +5,8 @@ import {
 } from "routing-controllers";
 import * as express from "express";
 import { Service } from "typedi";
-import { IResponseError } from "routing-controllers-openapi-extra";
 import { App } from "../modules/app";
+import { IResponseError } from "../modules/response";
 
 export function toSlug(str: string) {
     return str

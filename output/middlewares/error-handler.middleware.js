@@ -10,8 +10,8 @@ exports.CustomErrorHandler = void 0;
 exports.toSlug = toSlug;
 const routing_controllers_1 = require("routing-controllers");
 const typedi_1 = require("typedi");
-const routing_controllers_openapi_extra_1 = require("routing-controllers-openapi-extra");
 const app_1 = require("../modules/app");
+const response_1 = require("../modules/response");
 function toSlug(str) {
     return str
         .trim()
@@ -35,7 +35,7 @@ let CustomErrorHandler = class CustomErrorHandler {
         // 2. Формируем главный message
         const mainMessage = error.message || "Internal server error";
         // 3. Создаём IResponseError
-        const responseError = new routing_controllers_openapi_extra_1.IResponseError(mainMessage, status);
+        const responseError = new response_1.IResponseError(mainMessage, status);
         // 4. Если это ошибка валидации (обычно status=400), заполняем массив errors
         //    Допустим, error.errors — это массив ValidationError от class-validator
         if (status === 400 && error.errors && Array.isArray(error.errors)) {
