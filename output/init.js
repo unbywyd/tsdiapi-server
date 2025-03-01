@@ -69,6 +69,7 @@ const file_loader_1 = __importStar(require("./modules/file-loader"));
 const server_config_1 = __importDefault(require("./config/server.config"));
 const error_handler_middleware_1 = require("./middlewares/error-handler.middleware");
 const morgan_1 = require("./modules/morgan");
+const find_port_1 = require("./modules/find-port");
 function loadGradient() {
     return __awaiter(this, void 0, void 0, function* () {
         return (yield eval('import("gradient-string")')).default;
@@ -283,13 +284,18 @@ function initApp(options) {
                 app.use("/docs-json", (req, res) => {
                     res.json(spec);
                 });
-                server.listen(appPort, () => __awaiter(this, void 0, void 0, function* () {
+                const port = yield (0, find_port_1.findAvailablePort)(appPort, 10);
+                if (!port) {
+                    console.error(chalk.red("❌ Could not find an available port to start the server!"));
+                    return process.exit(1);
+                }
+                server.listen(port, () => __awaiter(this, void 0, void 0, function* () {
                     try {
                         spinner.succeed(chalk.green("✅ Server started successfully!"));
-                        logger_1.logger.info(`🚀 Server started at http://${appHost}:${appPort}\n🚨️ Environment: ${appOptions.environment}`);
-                        logger_1.logger.info(`Documentation is available at http://${appHost}:${appPort}${baseDir}`);
-                        const serverUrl = `http://${appHost}:${appPort}`;
-                        const docsUrl = `http://${appHost}:${appPort}${baseDir}`;
+                        logger_1.logger.info(`🚀 Server started at http://${appHost}:${port}\n🚨️ Environment: ${appOptions.environment}`);
+                        logger_1.logger.info(`Documentation is available at http://${appHost}:${port}${baseDir}`);
+                        const serverUrl = `http://${appHost}:${port}`;
+                        const docsUrl = `http://${appHost}:${port}${baseDir}`;
                         console.log(boxen(`${chalk.green("🚀")} ${chalk.green("Server started successfully!")}\n` +
                             `${chalk.cyan("🌍 Server is running at:")} ${chalk.green(serverUrl)}\n` +
                             `${chalk.cyan("📖 API Docs:")} ${chalk.green(docsUrl)}`, { padding: 1, borderColor: "cyan", align: "left" }));
