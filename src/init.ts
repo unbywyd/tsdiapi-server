@@ -29,6 +29,7 @@ import fileLoader, { getAppPath } from './modules/file-loader';
 import serverOptions from './config/server.config';
 import { CustomErrorHandler } from './middlewares/error-handler.middleware';
 import { loadMorganModule } from './modules/morgan';
+import { findAvailablePort } from './modules/find-port';
 
 async function loadGradient() {
     return (await eval('import("gradient-string")')).default;
@@ -279,16 +280,20 @@ export async function initApp(options?: CreateAppOptions) {
             app.use("/docs-json", (req, res) => {
                 res.json(spec);
             });
-
-            server.listen(appPort, async () => {
+            const port = await findAvailablePort(appPort, 10);
+            if (!port) {
+                console.error(chalk.red("❌ Could not find an available port to start the server!"));
+                return process.exit(1);
+            }
+            server.listen(port, async () => {
                 try {
                     spinner.succeed(chalk.green("✅ Server started successfully!"));
 
-                    logger.info(`🚀 Server started at http://${appHost}:${appPort}\n🚨️ Environment: ${appOptions.environment}`);
-                    logger.info(`Documentation is available at http://${appHost}:${appPort}${baseDir}`);
+                    logger.info(`🚀 Server started at http://${appHost}:${port}\n🚨️ Environment: ${appOptions.environment}`);
+                    logger.info(`Documentation is available at http://${appHost}:${port}${baseDir}`);
 
-                    const serverUrl = `http://${appHost}:${appPort}`;
-                    const docsUrl = `http://${appHost}:${appPort}${baseDir}`;
+                    const serverUrl = `http://${appHost}:${port}`;
+                    const docsUrl = `http://${appHost}:${port}${baseDir}`;
                     console.log(
                         boxen(
                             `${chalk.green("🚀")} ${chalk.green("Server started successfully!")}\n` +
