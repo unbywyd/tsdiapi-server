@@ -1,7 +1,7 @@
 {
   "version": "0.1.0",
   "name": "@tsdiapi/server",
-  "description": "A modular ESM API server built with TypeScript, Express, and TypeDI based on the TSDIAPI framework.",
+  "description": "A fully ESM-based, modular TypeScript server built on Express, TypeDI with automatic OpenAPI generation, inspired by the TSDIAPI framework.",
   "main": "output/index.js",
   "types": "output/index.d.ts",
   "private": false,
