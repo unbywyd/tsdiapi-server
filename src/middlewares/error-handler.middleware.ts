@@ -5,8 +5,8 @@ import {
 } from "routing-controllers";
 import * as express from "express";
 import { Service } from "typedi";
-import { App } from "../modules/app";
-import { IResponseError } from "../modules/response";
+import { App } from "../modules/app.js";
+import { IResponseError } from "../modules/response.js";
 
 export function toSlug(str: string) {
     return str
@@ -18,7 +18,7 @@ export function toSlug(str: string) {
 }
 @Service()
 @Middleware({ type: "after" })
-export class CustomErrorHandler implements ExpressErrorMiddlewareInterface {
+export default class CustomErrorHandler implements ExpressErrorMiddlewareInterface {
     public error(
         error: any,
         _req: express.Request,

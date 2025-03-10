@@ -61,11 +61,11 @@ export function generateJsonSchema<T>(
         if (options?.isArray) {
             return {
                 type: 'array',
-                items: schema as JSONSchema7,
+                items: schema as unknown as JSONSchema7,
             };
         }
 
-        return schema as JSONSchema7;
+        return schema as unknown as JSONSchema7;
     } catch (error) {
         console.error('Error generating JSON schema:', error);
         throw error;

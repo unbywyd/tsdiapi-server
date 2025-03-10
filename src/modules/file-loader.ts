@@ -1,8 +1,14 @@
 import { glob } from "glob";
 import path from "path";
-import Container from "typedi";
+import { Container } from "typedi";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 
 /**
  * Returns the absolute path to the root directory or a subdirectory.

@@ -1,13 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.IsEntity = IsEntity;
-exports.ReferenceModel = ReferenceModel;
-const class_validator_1 = require("class-validator");
-const class_transformer_1 = require("class-transformer");
-const class_validator_jsonschema_1 = require("class-validator-jsonschema");
-const output_1 = require("@tsdiapi/syncqueue/output");
+import { ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { JSONSchema } from "class-validator-jsonschema";
+import { getSyncQueueProvider } from "@tsdiapi/syncqueue";
 function FixArrayJsonSchemaReference(reference) {
-    return (0, class_validator_jsonschema_1.JSONSchema)({
+    return JSONSchema({
         type: "array",
         items: {
             $ref: `#/components/schemas/${reference.name}`,
@@ -15,7 +11,7 @@ function FixArrayJsonSchemaReference(reference) {
     });
 }
 function FixItemJsonSchemaReference(reference) {
-    return (0, class_validator_jsonschema_1.JSONSchema)({
+    return JSONSchema({
         $ref: `#/components/schemas/${reference.name}`,
     });
 }
@@ -29,30 +25,30 @@ function ApplyJsonSchemaType(type, target, propertyKey, isArray) {
         }
     }
 }
-function IsEntity(typeFunction, options) {
-    const isArray = (options === null || options === void 0 ? void 0 : options.each) || false;
+export function IsEntity(typeFunction, options) {
+    const isArray = options?.each || false;
     return function (target, propertyKey) {
-        (0, class_validator_1.ValidateNested)({ each: isArray })(target, propertyKey);
+        ValidateNested({ each: isArray })(target, propertyKey);
         const referenceType = typeFunction();
         Reflect.defineMetadata("design:itemtype", referenceType, target, propertyKey);
         if (referenceType instanceof Promise) {
             const task = referenceType.then(type => {
-                (0, class_transformer_1.Type)(() => type)(target, propertyKey);
+                Type(() => type)(target, propertyKey);
                 ApplyJsonSchemaType(type, target, propertyKey, isArray);
             }).catch(err => {
                 console.error("Error resolving type for property :" + String(propertyKey), err);
             });
-            (0, output_1.getSyncQueueProvider)().addTask(task);
+            getSyncQueueProvider().addTask(task);
         }
         else {
-            (0, class_transformer_1.Type)(() => referenceType)(target, propertyKey);
+            Type(() => referenceType)(target, propertyKey);
             ApplyJsonSchemaType(referenceType, target, propertyKey, isArray);
         }
     };
 }
-function ReferenceModel(modelName) {
+export function ReferenceModel(modelName) {
     return (target, propertyKey) => {
-        (0, class_validator_jsonschema_1.JSONSchema)({
+        JSONSchema({
             description: `@reference ${modelName}`,
         })(target, propertyKey);
     };

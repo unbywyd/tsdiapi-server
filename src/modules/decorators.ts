@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import { NextFunction, Request, Response } from "express";
 import { createParamDecorator, UseBefore } from "routing-controllers";
 import { OpenAPI } from "routing-controllers-openapi";
-import { toDTO } from "./utils";
+import { toDTO } from "./utils.js";
 
 export function UseJsonBody(): MethodDecorator {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {

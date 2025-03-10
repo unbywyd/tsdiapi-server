@@ -1,4 +1,4 @@
-import { AppContext } from "./AppContext";
+import { AppContext } from "./AppContext.js";
 export interface AppPlugin<T = any> {
     name: string;
     bootstrapFilesGlobPath?: string;

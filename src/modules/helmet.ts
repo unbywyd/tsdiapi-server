@@ -1,4 +1,4 @@
-import { HelmetOptions } from 'helmet/index.cjs';
+import { HelmetOptions } from 'helmet';
 import Helmet from 'helmet';
 import express from 'express';
 

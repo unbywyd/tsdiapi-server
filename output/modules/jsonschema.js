@@ -1,11 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.JsonSchemaProperty = JsonSchemaProperty;
-exports.JsonSchemaClass = JsonSchemaClass;
-exports.generateJsonSchema = generateJsonSchema;
-const class_validator_jsonschema_1 = require("class-validator-jsonschema");
-const class_validator_1 = require("class-validator");
-function JsonSchemaProperty(schemaOptions) {
+import { validationMetadatasToSchemas } from 'class-validator-jsonschema';
+import { getMetadataStorage } from 'class-validator';
+export function JsonSchemaProperty(schemaOptions) {
     return function (target, propertyKey) {
         const metadata = Reflect.getMetadata('jsonSchema', target) || {};
         metadata[propertyKey] = metadata[propertyKey] || {};
@@ -13,25 +8,25 @@ function JsonSchemaProperty(schemaOptions) {
         Reflect.defineMetadata('jsonSchema', metadata, target);
     };
 }
-function JsonSchemaClass(schemaOptions) {
+export function JsonSchemaClass(schemaOptions) {
     return function (target) {
         const metadata = Reflect.getMetadata('jsonSchema', target.prototype) || {};
         Object.assign(metadata, schemaOptions);
         Reflect.defineMetadata('jsonSchema', metadata, target.prototype);
     };
 }
-function generateJsonSchema(classConstructor, options) {
+export function generateJsonSchema(classConstructor, options) {
     try {
-        const metadataStorage = (0, class_validator_1.getMetadataStorage)();
+        const metadataStorage = getMetadataStorage();
         if (!metadataStorage) {
             throw new Error('No metadata storage found. Ensure that class-validator is properly set up.');
         }
         // Generate all schemas from class-validator metadata
-        const allSchemas = (0, class_validator_jsonschema_1.validationMetadatasToSchemas)({
+        const allSchemas = validationMetadatasToSchemas({
             refPointerPrefix: '#/components/schemas/',
         });
         // Determine the reference name (either provided or auto-generated)
-        const name = (options === null || options === void 0 ? void 0 : options.refName) || classConstructor.name;
+        const name = options?.refName || classConstructor.name;
         // Fetch the schema for the requested class
         const schema = allSchemas[name];
         if (!schema) {
@@ -50,7 +45,7 @@ function generateJsonSchema(classConstructor, options) {
             });
         }
         // If `isArray` is true, wrap the schema inside an array definition
-        if (options === null || options === void 0 ? void 0 : options.isArray) {
+        if (options?.isArray) {
             return {
                 type: 'array',
                 items: schema,

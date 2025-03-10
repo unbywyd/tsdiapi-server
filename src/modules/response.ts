@@ -2,8 +2,8 @@ import { IsBoolean, IsNumber, IsString } from "class-validator";
 import { Expose } from "class-transformer";
 import { validationMetadatasToSchemas } from "class-validator-jsonschema";
 import { OpenAPI } from "routing-controllers-openapi";
-import { toSlug, toDTO } from "./utils";
-import { IsEntity } from "./entity";
+import { toSlug, toDTO } from "./utils.js";
+import { IsEntity } from "./entity.js";
 
 
 export function getOpenAPIResponse<T>(

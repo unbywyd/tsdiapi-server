@@ -1,5 +1,5 @@
-import { AppOptions } from "./AppOptions";
-import { AppPlugin } from "./Plugin";
+import { AppOptions } from "./AppOptions.js";
+import { AppPlugin } from "./Plugin.js";
 import type { Application } from "express";
 import type { Server } from "http";
 import type { Container } from "typedi";

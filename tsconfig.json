@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
     "skipLibCheck": true,
-    "module": "commonjs",
+    "module": "NodeNext",
     "esModuleInterop": true,
-    "target": "ES6",
+    "target": "ES2022",
     "noImplicitAny": true,
     "declaration": true,
     "declarationMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "sourceMap": true,
     "outDir": "output",
     "baseUrl": ".",

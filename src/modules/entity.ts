@@ -3,7 +3,7 @@ import {
 } from "class-validator";
 import { Type } from "class-transformer";
 import { JSONSchema } from "class-validator-jsonschema";
-import { getSyncQueueProvider } from "@tsdiapi/syncqueue/output";
+import { getSyncQueueProvider } from "@tsdiapi/syncqueue";
 
 function FixArrayJsonSchemaReference(reference: any): PropertyDecorator {
     return JSONSchema({

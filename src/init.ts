@@ -1,51 +1,42 @@
+import figlet from "figlet";
+import boxen from 'boxen';
+import { pastel, rainbow, cristal, vice, passion } from 'gradient-string';
+import ora from 'ora';
+import chalk from 'chalk';
+import path from 'path';
+import express from 'express'
+import cors from 'cors';
+import { routingControllersToSpec } from 'routing-controllers-openapi'
+import { validationMetadatasToSchemas } from 'class-validator-jsonschema'
+import { createServer, Server } from 'http'
+import * as swaggerUiExpress from 'swagger-ui-express'
+import type { HelmetOptions } from 'helmet';
+import { Container } from 'typedi';
+
+import corsOptions from "./config/cors.config.js";
+import swaggerOptions from './config/swagger.config.js';
+import { App } from "./modules/app.js";
+import { AppContext, AppOptions, AppPlugin, CreateAppOptions } from "./types/index.js";
+import { loadHelmetModule } from './modules/helmet.js';
+import helmetOptions from './config/helmet.config.js';
+export * as jsonschema from './modules/jsonschema.js';
+import { createLogger, logger } from './modules/logger.js';
+import fileLoader, { getAppPath } from './modules/file-loader.js';
+import serverOptions from './config/server.config.js';
+import customErrorHandlerMiddleware from './middlewares/error-handler.middleware.js';
+import { loadMorganModule } from './modules/morgan.js';
+import { findAvailablePort } from './modules/find-port.js';
+import { getSyncQueueProvider } from '@tsdiapi/syncqueue';
 
 import {
     getMetadataArgsStorage,
     useContainer as routingControllersUseContainer,
     useExpressServer,
 } from 'routing-controllers';
-import { routingControllersToSpec } from 'routing-controllers-openapi'
-import { validationMetadatasToSchemas } from 'class-validator-jsonschema'
-import { createServer, Server } from 'http'
-import * as swaggerUiExpress from 'swagger-ui-express'
+import { loadESMControllers } from './modules/load-esm-controllers.js';
 
-import path from 'path';
-import express from 'express'
-import cors from 'cors';
-
-import corsOptions from "./config/cors.config";
-import swaggerOptions from './config/swagger.config';
-import { App } from "./modules/app";
-import { AppContext, AppOptions, AppPlugin, CreateAppOptions } from "./types";
-import { loadHelmetModule } from './modules/helmet';
-import helmetOptions from './config/helmet.config';
-import figlet from "figlet";
-export * as jsonschema from './modules/jsonschema';
-import type { HelmetOptions } from 'helmet';
-import { createLogger, logger } from './modules/logger';
-import Container from 'typedi';
-import fileLoader, { getAppPath } from './modules/file-loader';
-import serverOptions from './config/server.config';
-import { CustomErrorHandler } from './middlewares/error-handler.middleware';
-import { loadMorganModule } from './modules/morgan';
-import { findAvailablePort } from './modules/find-port';
-import { getSyncQueueProvider } from '@tsdiapi/syncqueue';
-
-async function loadGradient() {
-    return (await eval('import("gradient-string")')).default;
-}
-async function loadBoxen() {
-    return (await eval('import("boxen")')).default;
-}
-async function loadOra() {
-    return (await eval('import("ora")')).default;
-}
-async function loadChalk() {
-    return (await eval('import("chalk")')).default;
-}
 
 export async function initApp(options?: CreateAppOptions) {
-    const chalk = await loadChalk();
     try {
         await App.getAppConfig();
         const AppDir = App.appDir;
@@ -65,17 +56,13 @@ export async function initApp(options?: CreateAppOptions) {
             },
         }
 
-        const ora = await loadOra();
-        const gradient = await loadGradient();
-        const boxen = await loadBoxen();
-
-        console.log(gradient.pastel.multiline(figlet.textSync("TSDIAPI", { horizontalLayout: "full" })));
+        console.log(pastel.multiline(figlet.textSync("TSDIAPI", { horizontalLayout: "full" })));
 
         const spinner = ora({
             text: chalk.blue("🔧 Initializing application..."),
             spinner: "dots",
         }).start();
-        spinner.succeed(gradient.rainbow("✨ Starting the server..."));
+        spinner.succeed(rainbow("✨ Starting the server..."));
 
         const appOptions = typeof options?.config === 'function' ? options.config(appDefaultOptions) : options?.config ? { ...appDefaultOptions, ...options.config } : appDefaultOptions;
         appOptions.helmetOptions = {
@@ -125,7 +112,7 @@ export async function initApp(options?: CreateAppOptions) {
         spinner.text = chalk.yellow("📦 Loading services...");
         const servicesPath = AppDir + serverOptions.globServicesPath;
         await fileLoader(servicesPath, true);
-        Container.get(CustomErrorHandler);
+        Container.get(customErrorHandlerMiddleware);
 
         if (options?.plugins && options.plugins.length > 0) {
             for (const plugin of options.plugins) {
@@ -194,30 +181,28 @@ export async function initApp(options?: CreateAppOptions) {
             res.status(404).send({ status: 404, message: "Page Not Found!" });
         });
 
-
         routingControllersUseContainer(Container);
         loadMorganModule(app, logger);
 
-        const packageMiddlewares = getAppPath() + '/middlewares/**/*.middleware{.ts,.js}';
+
+        await loadESMControllers(controllers);
+        await loadESMControllers([
+            ...middlewares,
+            AppDir + serverOptions.globMiddlewaresPath
+        ]);
+
         useExpressServer(app, {
             validation: { stopAtFirstError: true, whitelist: true },
             cors: appOptions.corsOptions,
             classTransformer: true,
             defaultErrorHandler: false,
-            routePrefix: apiPrefix,
-            controllers: controllers,
-            middlewares: [
-                ...middlewares,
-                packageMiddlewares,
-                AppDir + serverOptions.globMiddlewaresPath
-            ],
+            routePrefix: apiPrefix
         });
         const syncQueueProvider = getSyncQueueProvider();
         await syncQueueProvider.resolveAll();
         syncQueueProvider.clear();
 
         const server: Server = createServer(app);
-
         context.server = server;
 
         if (options?.plugins && options.plugins.length > 0) {
@@ -336,7 +321,7 @@ export async function initApp(options?: CreateAppOptions) {
                 process.on(signal, async () => {
                     console.error(
                         boxen(
-                            gradient.cristal(`
+                            cristal(`
                 👋 Forced shutdown due to timeout.
                 🔌 Some processes didn't close in time!
                 💀 Terminating immediately...
@@ -361,21 +346,17 @@ export async function initApp(options?: CreateAppOptions) {
 }
 
 const gracefulShutdown = async (server: Server) => {
-    const ora = await loadOra();
-    const gradient = await loadGradient();
-    const boxen = await loadBoxen();
-
     const shutdownSpinner = ora({
-        text: gradient.passion("👋 Preparing for shutdown..."),
+        text: passion("👋 Preparing for shutdown..."),
         spinner: "earth",
     }).start();
 
-    shutdownSpinner.succeed(gradient.rainbow("✨ Almost done, cleaning up resources..."));
+    shutdownSpinner.succeed(rainbow("✨ Almost done, cleaning up resources..."));
 
     server.close(() => {
         console.log(
             boxen(
-                gradient.pastel(`
+                pastel(`
 💥 Server has been shut down gracefully.
 🔌 All connections closed. See you next time!
 🚀 Keep building amazing things!`),
@@ -389,7 +370,7 @@ const gracefulShutdown = async (server: Server) => {
             )
         );
 
-        console.log(gradient.vice("\n👋 Bye-bye! Take care, and happy coding! 🚀\n"));
+        console.log(vice("\n👋 Bye-bye! Take care, and happy coding! 🚀\n"));
         process.exit(0);
     });
     process.exit(1);

@@ -10,21 +10,21 @@
 import 'reflect-metadata'; // Enables metadata reflection used by decorators
 
 
-import { initApp } from "./init";
-import { App } from "./modules/app";
-import { CreateAppOptions } from "./types";
+import { initApp } from "./init.js";
+import { App } from "./modules/app.js";
+import { CreateAppOptions } from "./types/index.js";
 
-export { App } from './modules/app';
-export * from "./modules/decorators";
-export * from "./modules/response";
-export * from "./modules/utils";
-export * from "./modules/entity";
+export { App } from './modules/app.js';
+export * from "./modules/decorators.js";
+export * from "./modules/response.js";
+export * from "./modules/utils.js";
+export * from "./modules/entity.js";
 
 // Fix for previous versions
 const AppConfig = App.appConfig;
 export { AppConfig };
 
-export type * from './types';
+export type * from './types/index.js';
 
 export async function createApp(options?: CreateAppOptions) {
     App.initialize({

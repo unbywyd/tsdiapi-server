@@ -3,6 +3,7 @@ import { plainToClass } from 'class-transformer';
 import path from 'path';
 import fs from 'fs';
 import ModuleAlias from 'module-alias';
+import { pathToFileURL } from 'node:url';
 
 export type AppModuleConfigOptions = {
     appCwd: string;
@@ -84,7 +85,9 @@ class AppModule {
         const configAppFile = path.resolve(this.appDir!, this.isDevelopment ? 'app.config.ts' : 'app.config.js');
         if (fs.existsSync(configAppFile)) {
             try {
-                const module = await import(configAppFile);
+                // Convert the absolute path to a file:// URL
+                const configFileUrl = pathToFileURL(configAppFile).href;
+                const module = await import(configFileUrl); // Use the file:// URL
                 const ConfigSchema = module.default;
                 this.appConfig = ConfigSchema ? this.createAppConfig(ConfigSchema) : this.createAppConfig();
             } catch (error) {

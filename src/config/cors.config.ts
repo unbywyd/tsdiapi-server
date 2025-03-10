@@ -1,5 +1,5 @@
 import { CorsOptions } from "cors";
-import { App } from "../modules/app";
+import { App } from "../modules/app.js";
 
 export const corsOptions = async () => {
     await App.getAppConfig(); // Load app config

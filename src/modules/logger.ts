@@ -1,7 +1,7 @@
 import path from "path";
 import winston from "winston";
 import fs from "fs";
-import { App } from "./app";
+import { App } from "./app.js";
 
 type LoggerOptions = {
     baseDir: string;
