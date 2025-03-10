@@ -1,19 +1,24 @@
+// file-loader.ts
 import { glob } from "glob";
-import path from "path";
+import { pathToFileURL, fileURLToPath } from "url";
+import { dirname } from "path";
+import * as path from "path";
 import { Container } from "typedi";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
+/**
+ * In ESM, there is no __filename and __dirname, so we calculate them via import.meta.url
+ */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-
 /**
- * Returns the absolute path to the root directory or a subdirectory.
- * @param {string} relativePath - Relative path from the root directory.
- * @returns {string} - The absolute path.
+ * Returns the absolute path to the root folder (one level above the current file)
+ * or to a file/folder if relativePath is specified.
+ *
+ * @param {string} [relativePath=""] - Relative path from the root directory
+ * @returns {string} Absolute path
  */
 export function getAppPath(relativePath: string = ""): string {
     const rootDir = path.resolve(__dirname, "../");
@@ -21,76 +26,91 @@ export function getAppPath(relativePath: string = ""): string {
 }
 
 /**
- * Dynamically imports a file if it exists, otherwise returns an empty object.
- * @param {string} filePath - The absolute path of the file to import.
- * @returns {Promise<any>} - The imported module or an empty object.
+ * Dynamically imports a file if it exists,
+ * otherwise returns an empty object.
+ *
+ * @param {string} filePath Absolute path to the file
+ * @returns {Promise<any>} Module or {}
  */
-export const fileImport = async (filePath: string): Promise<any> => {
+export async function fileImport(filePath: string): Promise<any> {
     try {
         if (!existsSync(filePath)) {
             console.warn(`File not found: ${filePath}`);
-            return {}; // Return empty object if file does not exist
+            return {};
         }
-        const module = await import(filePath);
-        return module.default || module;
+        // Convert path to file:// URL – ESM import requires URL
+        const fileUrl = pathToFileURL(filePath).href;
+        const importedModule = await import(fileUrl);
+        return importedModule.default || importedModule;
     } catch (error) {
         console.error(`Error importing file: ${filePath}`, error);
-        return {}; // Return empty object on error
+        return {};
     }
-};
-
-/**
- * Loads and imports a project file by resolving its absolute path.
- * @param {string} relativePath - Relative path to the project file.
- * @returns {Promise<any>} - The imported module.
- */
-export const loadProjectFile = async (relativePath: string): Promise<any> => {
-    const fullPath = getAppPath(relativePath);
-    return await fileImport(fullPath);
-};
-
-
-export const loadProjectConfigFile = async (relativePath: string): Promise<any> => {
-    const fullPath = getAppPath('/config/' + relativePath);
-    const module = await fileImport(fullPath);
-    return module;
 }
 
 /**
- * Reads a file as plain text from the project directory.
- * @param {string} relativePath - Relative path to the file.
- * @returns {Promise<string>} - The file content as a string.
+ * Loads a module from a relative path (relative to the root).
+ *
+ * @param {string} relativePath Relative path
+ * @returns {Promise<any>} Imported module
  */
-export const fileLoadAsText = async (relativePath: string): Promise<string> => {
+export async function loadProjectFile(relativePath: string): Promise<any> {
     const fullPath = getAppPath(relativePath);
-    return await readFile(fullPath, "utf-8");
-};
+    return fileImport(fullPath);
+}
 
 /**
- * Loads all matching files using glob, imports them, and optionally registers them with Typedi.
- * @param {string} pattern - Glob pattern to match files.
- * @param {boolean} [setToContainer=false] - Whether to register modules with Typedi.
- * @returns {Promise<any[]>} - An array of imported modules.
+ * Loads a config file from /config/<relativePath>
+ *
+ * @param {string} relativePath File name in the /config folder
+ * @returns {Promise<any>}
  */
-export const fileLoader = async (pattern: string, setToContainer: boolean = false): Promise<any[]> => {
+export async function loadProjectConfigFile(relativePath: string): Promise<any> {
+    const fullPath = getAppPath("/config/" + relativePath);
+    return fileImport(fullPath);
+}
+
+/**
+ * Reads a file as text
+ *
+ * @param {string} relativePath Relative path to the file
+ * @returns {Promise<string>} File content
+ */
+export async function fileLoadAsText(relativePath: string): Promise<string> {
+    const fullPath = getAppPath(relativePath);
+    return readFile(fullPath, "utf-8");
+}
+
+export async function fileLoader(pattern: string, setToContainer: boolean = false): Promise<any[]> {
+    // Fix slashes to work on Windows / POSIX
     const safePattern = pattern.replace(/\\/g, "/").replace(/\/+/g, "/");
-    const files = await glob(safePattern, { cwd: getAppPath() });
+
+    // Find files by pattern
+    // By default, glob will be relative to `cwd: getAppPath()`
+    const matchedFiles = await glob(safePattern, { cwd: getAppPath() });
     const modules: any[] = [];
 
-    for (const file of files) {
-        const absolutePath = path.isAbsolute(file) ? file : path.join(getAppPath(), file);
-        const module = await fileImport(absolutePath);
+    for (const file of matchedFiles) {
+        // If glob returns a relative path – convert to absolute
+        const absolutePath = path.isAbsolute(file)
+            ? file
+            : path.join(getAppPath(), file);
 
-        if (module) {
-            modules.push(module);
+        const imported = await fileImport(absolutePath);
+        if (imported) {
+            modules.push(imported);
         }
 
-        if (setToContainer && module?.default) {
-            Container.get(module.default);
+        // If DI is needed – register default export in the container
+        if (setToContainer && imported?.default) {
+            Container.get(imported.default);
         }
     }
 
     return modules;
-};
+}
 
+/**
+ * Default export, if needed
+ */
 export default fileLoader;
