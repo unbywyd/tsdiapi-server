@@ -2,7 +2,6 @@ import * as dotenv from 'dotenv';
 import { plainToClass } from 'class-transformer';
 import path from 'path';
 import fs from 'fs';
-import ModuleAlias from 'module-alias';
 import { pathToFileURL } from 'node:url';
 class AppModule {
     appDir = null;
@@ -12,11 +11,6 @@ class AppModule {
     isDevelopment = false;
     appConfig = null;
     initialized = false;
-    alias = {
-        '@base': '',
-        '@api': '/api',
-        '@features': '/api/features',
-    };
     getEnvFile(baseDir) {
         const envFilePath = path.resolve(baseDir, `.env.${process.env.NODE_ENV}`);
         if (fs.existsSync(envFilePath))
@@ -27,13 +21,6 @@ class AppModule {
             return defaultEnvFilePath;
         }
         return null;
-    }
-    fixModuleAlias(dirName) {
-        const newAlias = Object.entries(this.alias).reduce((acc, [key, value]) => {
-            acc[key] = dirName + value;
-            return acc;
-        }, {});
-        ModuleAlias.addAliases(newAlias);
     }
     getRootDir(cwd) {
         return this.isProduction ? path.join(cwd, 'dist') : path.join(cwd, 'src');
@@ -46,7 +33,6 @@ class AppModule {
         this.isDevelopment = this.environment === 'development';
         this.appRoot = options.appCwd;
         this.appDir = this.getRootDir(options.appCwd);
-        this.fixModuleAlias(this.appDir);
         const envFile = this.getEnvFile(this.appRoot);
         if (envFile) {
             dotenv.config({ path: envFile });

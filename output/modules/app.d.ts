@@ -9,9 +9,7 @@ declare class AppModule {
     isDevelopment: boolean;
     appConfig: Record<string, any> | null;
     private initialized;
-    private alias;
     private getEnvFile;
-    private fixModuleAlias;
     private getRootDir;
     initialize(options: AppModuleConfigOptions): Promise<void>;
     getAppConfig(): Promise<Record<string, any>>;

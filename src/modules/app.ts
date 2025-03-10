@@ -2,7 +2,6 @@ import * as dotenv from 'dotenv';
 import { plainToClass } from 'class-transformer';
 import path from 'path';
 import fs from 'fs';
-import ModuleAlias from 'module-alias';
 import { pathToFileURL } from 'node:url';
 
 export type AppModuleConfigOptions = {
@@ -17,11 +16,6 @@ class AppModule {
     public appConfig: Record<string, any> | null = null;
     private initialized = false;
 
-    private alias = {
-        '@base': '',
-        '@api': '/api',
-        '@features': '/api/features',
-    };
 
     private getEnvFile(baseDir: string): string | null {
         const envFilePath = path.resolve(baseDir, `.env.${process.env.NODE_ENV}`);
@@ -33,15 +27,6 @@ class AppModule {
             return defaultEnvFilePath;
         }
         return null;
-    }
-
-    private fixModuleAlias(dirName: string): void {
-        const newAlias = Object.entries(this.alias).reduce((acc, [key, value]) => {
-            acc[key] = dirName + value;
-            return acc;
-        }, {} as Record<string, string>);
-
-        ModuleAlias.addAliases(newAlias);
     }
 
     private getRootDir(cwd: string): string {
@@ -57,8 +42,6 @@ class AppModule {
 
         this.appRoot = options.appCwd;
         this.appDir = this.getRootDir(options.appCwd);
-
-        this.fixModuleAlias(this.appDir);
 
         const envFile = this.getEnvFile(this.appRoot);
         if (envFile) {
