@@ -62,6 +62,13 @@ class AppModule {
         return this.appConfig!;
     }
 
+    public async env(key: string, defaultValue?: string): Promise<string | undefined> {
+        if (!this.appConfig) {
+            await this.loadConfig();
+        }
+        return this.appConfig![key] || defaultValue;
+    }
+
     private async loadConfig(): Promise<void> {
         if (this.appConfig) return;
 
