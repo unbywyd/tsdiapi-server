@@ -1,5 +1,5 @@
 {
-  "version": "0.1.2",
+  "version": "0.1.3",
   "name": "@tsdiapi/server",
   "description": "A fully ESM-based, modular TypeScript server built on Express, TypeDI with automatic OpenAPI generation, inspired by the TSDIAPI framework.",
   "main": "output/index.js",

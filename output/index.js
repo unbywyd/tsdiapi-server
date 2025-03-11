@@ -15,9 +15,6 @@ export * from "./modules/decorators.js";
 export * from "./modules/response.js";
 export * from "./modules/utils.js";
 export * from "./modules/entity.js";
-// Fix for previous versions
-const AppConfig = App.appConfig;
-export { AppConfig };
 export async function createApp(options) {
     App.initialize({
         appCwd: process.cwd(),

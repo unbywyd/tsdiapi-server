@@ -13,6 +13,7 @@ declare class AppModule {
     private getRootDir;
     initialize(options: AppModuleConfigOptions): Promise<void>;
     getAppConfig(): Promise<Record<string, any>>;
+    env(key: string, defaultValue?: string): Promise<string | undefined>;
     private loadConfig;
     private _prepareEnv;
     private createAppConfig;

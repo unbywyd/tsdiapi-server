@@ -14,8 +14,6 @@ export * from "./modules/decorators.js";
 export * from "./modules/response.js";
 export * from "./modules/utils.js";
 export * from "./modules/entity.js";
-declare const AppConfig: Record<string, any>;
-export { AppConfig };
 export type * from './types/index.js';
 export declare function createApp(options?: CreateAppOptions): Promise<void>;
 //# sourceMappingURL=index.d.ts.map

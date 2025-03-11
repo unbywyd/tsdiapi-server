@@ -49,6 +49,12 @@ class AppModule {
         }
         return this.appConfig;
     }
+    async env(key, defaultValue) {
+        if (!this.appConfig) {
+            await this.loadConfig();
+        }
+        return this.appConfig[key] || defaultValue;
+    }
     async loadConfig() {
         if (this.appConfig)
             return;
