@@ -1,19 +1,6 @@
-/**
- * Production-Ready Application Plugin
- *
- * This module initializes and configures an Express-based application
- * with production-grade features including security, logging, API documentation,
- * error handling, and plugin support.
- *
- * All functionalities have been thoroughly commented for clarity and maintainability.
- */
 import 'reflect-metadata';
-import { CreateAppOptions } from "./types/index.js";
-export { App } from './modules/app.js';
-export * from "./modules/decorators.js";
-export * from "./modules/response.js";
-export * from "./modules/utils.js";
-export * from "./modules/entity.js";
-export type * from './types/index.js';
-export declare function createApp(options?: CreateAppOptions): Promise<void>;
+import fastifyMultipart from '@fastify/multipart';
+import { AppContext, AppOptions } from './types.js';
+export declare const defaultAjvPlugins: (typeof fastifyMultipart.ajvFilePlugin)[];
+export declare function createApp<T extends object = Record<string, any>>(options?: AppOptions<T>): Promise<AppContext<T> | null>;
 //# sourceMappingURL=index.d.ts.map
