@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import fastifyMultipart, { FastifyMultipartAttachFieldsToBodyOptions, ajvFilePlugin } from '@fastify/multipart';
+import fastifyMultipart, { FastifyMultipartAttachFieldsToBodyOptions } from '@fastify/multipart';
 import Fastify, { FastifyInstance, FastifyRequest, FastifyServerOptions } from 'fastify';
 import { AppContext, AppMainOptions, AppOptions, UploadFile } from './types.js';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
@@ -18,16 +18,14 @@ import { Container } from 'typedi';
 import { RouteBuilder, StatusSchemas } from './route.js';
 import { TSchema } from '@sinclair/typebox';
 
-export const defaultAjvPlugins = [
-    ajvFilePlugin
-];
+export * from './types.js';
+export * from './route.js';
 
 export async function createApp<T extends object = Record<string, any>>(options: AppOptions<T> = {}): Promise<AppContext<T> | null> {
     const fastifyOptions = 'function' === typeof options.fastifyOptions ? options.fastifyOptions : (defaultOptions: FastifyServerOptions) => defaultOptions;
     const fastify = Fastify(fastifyOptions({
         logger: options.logger ?? false,
         ajv: {
-            plugins: defaultAjvPlugins,
             customOptions: { strict: false }
         }
     })).withTypeProvider<TypeBoxTypeProvider>();

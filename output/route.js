@@ -1,6 +1,6 @@
 import { Type, } from '@sinclair/typebox';
 import { fileTypeFromBuffer } from 'file-type';
-export function groupFilesByFieldname(files) {
+function groupFilesByFieldname(files) {
     return files.reduce((acc, file) => {
         if (!acc[file.fieldname]) {
             acc[file.fieldname] = [];

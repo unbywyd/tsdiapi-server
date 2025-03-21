@@ -9,7 +9,7 @@ export type FileOptions = {
     maxFiles?: number;
 };
 
-export function groupFilesByFieldname(files: UploadFile[]): Record<string, UploadFile[]> {
+function groupFilesByFieldname(files: UploadFile[]): Record<string, UploadFile[]> {
     return files.reduce<Record<string, UploadFile[]>>((acc, file) => {
         if (!acc[file.fieldname]) {
             acc[file.fieldname] = [];
@@ -78,7 +78,7 @@ export type PrehandlerFn<TResponses extends StatusSchemas, TState> = (
 ) => Promise<ResponseUnion<TResponses>> | ResponseUnion<TResponses>;
 
 
-interface RouteConfig<TState = unknown> {
+export interface RouteConfig<TState = unknown> {
     method: string;
     url: string;
     modify?: (routeConfig: RouteOptions) => Promise<RouteOptions> | RouteOptions;
@@ -136,7 +136,6 @@ export type RequestWithState<
 > & {
     routeData: TState;
 };
-
 
 export class RouteBuilder<
     Params extends TSchema = TSchema,
@@ -712,3 +711,4 @@ export class RouteBuilder<
         this.fastify.route(newRouteOptions);
     }
 }
+

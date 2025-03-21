@@ -6,7 +6,6 @@ export type FileOptions = {
     accept?: string[];
     maxFiles?: number;
 };
-export declare function groupFilesByFieldname(files: UploadFile[]): Record<string, UploadFile[]>;
 export type OnSendHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply, payload: unknown) => void | Promise<void>;
 export type PreValidationHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => void | Promise<void> | false;
 export type OnRequestHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => void | Promise<void>;
@@ -28,6 +27,41 @@ type MergeStatus<TCurrent extends StatusSchemas, Code extends number, Schema ext
 };
 export type HookType = 'preHandler' | 'onRequest' | 'preValidation' | 'preParsing' | 'preSerialization' | 'onSend' | 'onResponse' | 'onError';
 export type PrehandlerFn<TResponses extends StatusSchemas, TState> = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => Promise<ResponseUnion<TResponses>> | ResponseUnion<TResponses>;
+export interface RouteConfig<TState = unknown> {
+    method: string;
+    url: string;
+    modify?: (routeConfig: RouteOptions) => Promise<RouteOptions> | RouteOptions;
+    schema: {
+        params?: TSchema;
+        body?: TSchema;
+        querystring?: TSchema;
+        headers?: TSchema;
+        response?: Record<number, TSchema>;
+    };
+    errorHandler?: ErrorHandlerHook;
+    fileOptions?: Record<string, FileOptions>;
+    guards: Array<GuardFn<StatusSchemas>>;
+    preHandlers: Array<PrehandlerFn<StatusSchemas, TState>> | null;
+    preValidation: PreValidationHook | null;
+    preParsing: PreParsingHook | null;
+    preSerialization: PreSerializationHook | null;
+    onRequest: OnRequestHook | null;
+    onSend: OnSendHook | null;
+    onResponse: OnResponseHook | null;
+    onError: OnErrorHook | null;
+    resolver?: (req: FastifyRequest) => Promise<TState> | TState;
+    responseHeaders: Record<string, string>;
+    isMultipart?: boolean;
+    responseType?: string;
+    cacheControl?: string;
+    handler?: (this: RouteBuilder, req: FastifyRequest, reply: FastifyReply) => Promise<unknown> | unknown;
+    tags?: string[];
+    summary?: string;
+    description?: string;
+    security?: Array<{
+        [key: string]: string[];
+    }>;
+}
 declare module 'fastify' {
     interface FastifyRequest {
         routeData?: unknown;

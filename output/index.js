@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import fastifyMultipart, { ajvFilePlugin } from '@fastify/multipart';
+import fastifyMultipart from '@fastify/multipart';
 import Fastify from 'fastify';
 import { setupCors } from './cors.js';
 import { setupHelmet } from './helmet.js';
@@ -14,15 +14,13 @@ import { makeLoadPath, removeTrailingSlash } from './utils.js';
 import { setupStatic } from './static.js';
 import { Container } from 'typedi';
 import { RouteBuilder } from './route.js';
-export const defaultAjvPlugins = [
-    ajvFilePlugin
-];
+export * from './types.js';
+export * from './route.js';
 export async function createApp(options = {}) {
     const fastifyOptions = 'function' === typeof options.fastifyOptions ? options.fastifyOptions : (defaultOptions) => defaultOptions;
     const fastify = Fastify(fastifyOptions({
         logger: options.logger ?? false,
         ajv: {
-            plugins: defaultAjvPlugins,
             customOptions: { strict: false }
         }
     })).withTypeProvider();
