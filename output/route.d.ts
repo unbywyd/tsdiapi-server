@@ -14,7 +14,7 @@ export type OnResponseHook = (this: RouteBuilder, request: RequestWithState, rep
 export type OnErrorHook = (this: RouteBuilder, error: FastifyError, request: RequestWithState, reply: FastifyReply) => void | Promise<void>;
 export type ErrorHandlerHook = (this: RouteBuilder, error: FastifyError, request: RequestWithState, reply: FastifyReply) => void | Promise<void>;
 export type PreParsingHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply, payload: unknown) => void | Promise<void>;
-export type GuardFn<TResponses extends Record<number, TSchema>> = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>;
+export type GuardFn<TResponses extends Record<number, TSchema>, TState> = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>;
 export type StatusSchemas = Record<number, TSchema>;
 export type ResponseUnion<TResponses extends StatusSchemas> = {
     [K in keyof TResponses]: K extends number ? {
@@ -26,7 +26,8 @@ type MergeStatus<TCurrent extends StatusSchemas, Code extends number, Schema ext
     [P in Code]: Schema;
 };
 export type HookType = 'preHandler' | 'onRequest' | 'preValidation' | 'preParsing' | 'preSerialization' | 'onSend' | 'onResponse' | 'onError';
-export type PrehandlerFn<TResponses extends StatusSchemas, TState> = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => Promise<ResponseUnion<TResponses>> | ResponseUnion<TResponses>;
+export type PrehandlerFn = (this: RouteBuilder, req: RequestWithState, reply: FastifyReply) => Promise<unknown> | unknown;
+export type HandlerFn = (this: RouteBuilder, req: RequestWithState, reply: FastifyReply) => Promise<unknown> | unknown;
 export interface RouteConfig<TState = unknown> {
     method: string;
     url: string;
@@ -40,8 +41,8 @@ export interface RouteConfig<TState = unknown> {
     };
     errorHandler?: ErrorHandlerHook;
     fileOptions?: Record<string, FileOptions>;
-    guards: Array<GuardFn<StatusSchemas>>;
-    preHandlers: Array<PrehandlerFn<StatusSchemas, TState>> | null;
+    guards: Array<GuardFn<StatusSchemas, TState>>;
+    preHandlers: Array<PrehandlerFn> | null;
     preValidation: PreValidationHook | null;
     preParsing: PreParsingHook | null;
     preSerialization: PreSerializationHook | null;
@@ -54,7 +55,7 @@ export interface RouteConfig<TState = unknown> {
     isMultipart?: boolean;
     responseType?: string;
     cacheControl?: string;
-    handler?: (this: RouteBuilder, req: FastifyRequest, reply: FastifyReply) => Promise<unknown> | unknown;
+    handler?: HandlerFn;
     tags?: string[];
     summary?: string;
     description?: string;
@@ -103,22 +104,22 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     tags(tags: string[]): this;
     summary(summary: string): this;
     description(description: string): this;
-    auth(type?: "bearer" | "basic" | "apiKey", guard?: GuardFn<TResponses>): this;
+    auth(type?: "bearer" | "basic" | "apiKey", guard?: GuardFn<TResponses, TState>): this;
     params<T extends TSchema>(schema: T): RouteBuilder<T, Body, Query, Headers, TResponses, TState>;
     body<T extends TSchema>(schema: T): RouteBuilder<Params, T, Query, Headers, TResponses, TState>;
     query<T extends TSchema>(schema: T): RouteBuilder<Params, Body, T, Headers, TResponses, TState>;
     headers<T extends TSchema>(schema: T): RouteBuilder<Params, Body, Query, T, TResponses, TState>;
     code<Code extends number, T extends TSchema>(code: Code, schema: T): RouteBuilder<Params, Body, Query, Headers, MergeStatus<TResponses, Code, T>, TState>;
-    guard(fn: GuardFn<TResponses>): this;
-    onRequest(fn: OnRequestHook): this;
-    preValidation(fn: PreValidationHook): this;
-    preParsing(fn: PreParsingHook): this;
-    preSerialization(fn: PreSerializationHook): this;
-    preHandler(fn: PrehandlerFn<StatusSchemas, unknown>): this;
-    onSend(fn: OnSendHook): this;
-    onResponse(fn: OnResponseHook): this;
-    onError(fn: OnErrorHook): this;
-    setErrorHandler(fn: ErrorHandlerHook): this;
+    guard(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>): this;
+    onRequest(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
+    preValidation(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void> | false): this;
+    preParsing(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply, payload: unknown) => void | Promise<void>): this;
+    preSerialization(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply, payload: unknown) => void | Promise<void>): this;
+    preHandler(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
+    onSend(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply, payload: unknown) => void | Promise<void>): this;
+    onResponse(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
+    onError(fn: (this: RouteBuilder, error: FastifyError, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
+    setErrorHandler(fn: (this: RouteBuilder, error: FastifyError, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
     resolve<TNewState extends TState>(fn: (req: FastifyRequest) => Promise<TNewState> | TNewState): RouteBuilder<Params, Body, Query, Headers, TResponses, TNewState>;
     handler(fn: (req: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => Promise<ResponseUnion<TResponses> | string> | (ResponseUnion<TResponses> | string)): this;
     responseHeader<Code extends keyof TResponses>(name: string, value: string, statusCode: Code): this;

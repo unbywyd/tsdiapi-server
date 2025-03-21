@@ -31,6 +31,9 @@ export class RouteBuilder {
         this.appContext = appContext;
         this.fastify = appContext.fastify;
     }
+    // ---------------------------
+    // 1) Определение Content-Type
+    // ---------------------------
     setRequestFormat(contentType) {
         if (contentType === 'multipart/form-data') {
             this.config.isMultipart = true;
@@ -74,6 +77,9 @@ export class RouteBuilder {
         this.config.responseType = type;
         return this;
     }
+    // -------------------------
+    // 2) HTTP-методы
+    // -------------------------
     get(path) {
         this.config.method = 'GET';
         this.config.url = path;
@@ -104,6 +110,7 @@ export class RouteBuilder {
         this.config.url = path;
         return this;
     }
+    // Swagger-совместимость
     tags(tags) {
         this.config.tags = tags;
         return this;
@@ -146,6 +153,9 @@ export class RouteBuilder {
         }
         return this;
     }
+    // --------------------------
+    // 3) Определение схемы
+    // --------------------------
     params(schema) {
         this.config.schema.params = schema;
         return this;
@@ -169,6 +179,9 @@ export class RouteBuilder {
         });
         return this;
     }
+    // --------------------------
+    // 4) Guard-функции
+    // --------------------------
     guard(fn) {
         this.config.guards.push(async (req, reply) => {
             const result = await fn.call(this, req, reply);
@@ -182,6 +195,9 @@ export class RouteBuilder {
         });
         return this;
     }
+    // --------------------------
+    // 5) Hooks
+    // --------------------------
     onRequest(fn) {
         this.config.onRequest = fn;
         return this;
@@ -218,18 +234,29 @@ export class RouteBuilder {
         this.config.errorHandler = fn;
         return this;
     }
+    // -------------------------------------------
+    // 6) Передача данных между хуками (resolver)
+    // -------------------------------------------
     resolve(fn) {
         this.config.resolver = fn;
         return this;
     }
+    // --------------------------------
+    // 7) Финальный обработчик
+    // --------------------------------
     handler(fn) {
         this.config.handler = fn;
         return this;
     }
-    responseHeader(name, value, statusCode) {
+    // ------------------------------------------------
+    // 8) Кастомные заголовки ответа и Cache-Control
+    // ------------------------------------------------
+    responseHeader(name, value, statusCode // ✅ Ограничиваем только зарегистрированными статусами
+    ) {
         if (!(statusCode in this.config.schema.response)) {
             throw new Error(`Cannot add header to status ${statusCode.toString()}: this status is not defined in .success() or .error()`);
         }
+        // Добавляем заголовок в HTTP-ответ (Fastify)
         this.config.responseHeaders[name] = value;
         const schema = this.config.schema.response[statusCode];
         if (schema && typeof schema === 'object') {
@@ -252,10 +279,16 @@ export class RouteBuilder {
         this.config.fileOptions[field] = options;
         return this;
     }
+    // ---------------------------------
+    // 10) Модификация маршрута
+    // ---------------------------------
     modify(fn) {
         this.config.modify = fn;
         return this;
     }
+    // --------------------------------------
+    // 11) Регистрация маршрута (build)
+    // --------------------------------------
     async build() {
         const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError } = this.config;
         if (!handler) {
@@ -335,6 +368,7 @@ export class RouteBuilder {
                         const options = fileOptions[file.fieldname] || defaultOptions;
                         if (!options)
                             continue;
+                        // Проверка максимального размера
                         if (options.maxFileSize && file.filesize > options.maxFileSize) {
                             errors.push(`File "${file.filename}" exceeds max size of ${options.maxFileSize} bytes.`);
                         }

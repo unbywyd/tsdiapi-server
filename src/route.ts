@@ -8,7 +8,6 @@ export type FileOptions = {
     accept?: string[];
     maxFiles?: number;
 };
-
 function groupFilesByFieldname(files: UploadFile[]): Record<string, UploadFile[]> {
     return files.reduce<Record<string, UploadFile[]>>((acc, file) => {
         if (!acc[file.fieldname]) {
@@ -18,7 +17,6 @@ function groupFilesByFieldname(files: UploadFile[]): Record<string, UploadFile[]
         return acc;
     }, {});
 }
-
 export type OnSendHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply, payload: unknown) => void | Promise<void>;
 export type PreValidationHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => void | Promise<void> | false;
 export type OnRequestHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => void | Promise<void>;
@@ -37,23 +35,19 @@ export type ErrorHandlerHook = (
     request: RequestWithState,
     reply: FastifyReply
 ) => void | Promise<void>;
-
 export type PreParsingHook = (
     this: RouteBuilder,
     request: RequestWithState,
     reply: FastifyReply,
     payload: unknown
 ) => void | Promise<void>;
-
-
-export type GuardFn<TResponses extends Record<number, TSchema>> = (
+export type GuardFn<TResponses extends Record<number, TSchema>, TState> = (
     this: RouteBuilder,
     request: RequestWithState,
     reply: FastifyReply
 ) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>;
 
 export type StatusSchemas = Record<number, TSchema>;
-
 
 export type ResponseUnion<TResponses extends StatusSchemas> =
     {
@@ -70,13 +64,8 @@ type MergeStatus<
 > = TCurrent & { [P in Code]: Schema };
 
 export type HookType = 'preHandler' | 'onRequest' | 'preValidation' | 'preParsing' | 'preSerialization' | 'onSend' | 'onResponse' | 'onError';
-
-export type PrehandlerFn<TResponses extends StatusSchemas, TState> = (
-    this: RouteBuilder,
-    request: RequestWithState,
-    reply: FastifyReply
-) => Promise<ResponseUnion<TResponses>> | ResponseUnion<TResponses>;
-
+export type PrehandlerFn = (this: RouteBuilder, req: RequestWithState, reply: FastifyReply) => Promise<unknown> | unknown;
+export type HandlerFn = (this: RouteBuilder, req: RequestWithState, reply: FastifyReply) => Promise<unknown> | unknown;
 
 export interface RouteConfig<TState = unknown> {
     method: string;
@@ -91,8 +80,8 @@ export interface RouteConfig<TState = unknown> {
     };
     errorHandler?: ErrorHandlerHook;
     fileOptions?: Record<string, FileOptions>;
-    guards: Array<GuardFn<StatusSchemas>>;
-    preHandlers: Array<PrehandlerFn<StatusSchemas, TState>> | null;
+    guards: Array<GuardFn<StatusSchemas, TState>>;
+    preHandlers: Array<PrehandlerFn> | null;
     preValidation: PreValidationHook | null;
     preParsing: PreParsingHook | null;
     preSerialization: PreSerializationHook | null;
@@ -105,7 +94,7 @@ export interface RouteConfig<TState = unknown> {
     isMultipart?: boolean;
     responseType?: string;
     cacheControl?: string;
-    handler?: (this: RouteBuilder, req: FastifyRequest, reply: FastifyReply) => Promise<unknown> | unknown;
+    handler?: HandlerFn;
     tags?: string[];
     summary?: string;
     description?: string;
@@ -137,6 +126,7 @@ export type RequestWithState<
     routeData: TState;
 };
 
+
 export class RouteBuilder<
     Params extends TSchema = TSchema,
     Body extends TSchema = TSchema,
@@ -165,6 +155,10 @@ export class RouteBuilder<
     constructor(private appContext: AppContext<Record<string, any>>) {
         this.fastify = appContext.fastify;
     }
+
+    // ---------------------------
+    // 1) Определение Content-Type
+    // ---------------------------
 
     public setRequestFormat(contentType: string): this {
         if (contentType === 'multipart/form-data') {
@@ -219,6 +213,10 @@ export class RouteBuilder<
         return this;
     }
 
+    // -------------------------
+    // 2) HTTP-методы
+    // -------------------------
+
     public get(path: string): this {
         this.config.method = 'GET';
         this.config.url = path;
@@ -255,6 +253,7 @@ export class RouteBuilder<
         return this;
     }
 
+    // Swagger-совместимость
     public tags(tags: string[]): this {
         this.config.tags = tags;
         return this;
@@ -270,7 +269,7 @@ export class RouteBuilder<
         return this;
     }
 
-    public auth(type: "bearer" | "basic" | "apiKey" = "bearer", guard?: GuardFn<TResponses>): this {
+    public auth(type: "bearer" | "basic" | "apiKey" = "bearer", guard?: GuardFn<TResponses, TState>): this {
 
         if (!this.config.schema.headers) {
             this.config.schema.headers = Type.Object({});
@@ -308,6 +307,11 @@ export class RouteBuilder<
         return this;
     }
 
+
+    // --------------------------
+    // 3) Определение схемы
+    // --------------------------
+
     public params<T extends TSchema>(
         schema: T
     ): RouteBuilder<T, Body, Query, Headers, TResponses, TState> {
@@ -328,6 +332,7 @@ export class RouteBuilder<
         this.config.schema.querystring = schema;
         return this as unknown as RouteBuilder<Params, Body, T, Headers, TResponses, TState>;
     }
+
     public headers<T extends TSchema>(
         schema: T
     ): RouteBuilder<Params, Body, Query, T, TResponses, TState> {
@@ -356,8 +361,16 @@ export class RouteBuilder<
         >;
     }
 
+    // --------------------------
+    // 4) Guard-функции
+    // --------------------------
+
     public guard(
-        fn: GuardFn<TResponses>
+        fn: (
+            this: RouteBuilder,
+            request: RequestWithState<Params, Body, Query, Headers, TState>,
+            reply: FastifyReply
+        ) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>
     ): this {
         this.config.guards.push(async (req, reply) => {
             const result = await fn.call(this, req, reply);
@@ -375,51 +388,56 @@ export class RouteBuilder<
         return this;
     }
 
-    public onRequest(fn: OnRequestHook): this {
+    // --------------------------
+    // 5) Hooks
+    // --------------------------
+    public onRequest(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this {
         this.config.onRequest = fn;
         return this;
     }
 
-    public preValidation(fn: PreValidationHook): this {
+    public preValidation(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void> | false): this {
         this.config.preValidation = fn;
         return this;
     }
 
-    public preParsing(fn: PreParsingHook): this {
+    public preParsing(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply, payload: unknown) => void | Promise<void>): this {
         this.config.preParsing = fn;
         return this;
     }
 
-    public preSerialization(fn: PreSerializationHook): this {
+    public preSerialization(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply, payload: unknown) => void | Promise<void>): this {
         this.config.preSerialization = fn;
         return this;
     }
 
-    public preHandler(fn: PrehandlerFn<StatusSchemas, unknown>): this {
+    public preHandler(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this {
         this.config.preHandlers.push(fn);
         return this;
     }
-
-    public onSend(fn: OnSendHook): this {
+    public onSend(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply, payload: unknown) => void | Promise<void>): this {
         this.config.onSend = fn;
         return this;
     }
 
-    public onResponse(fn: OnResponseHook): this {
+    public onResponse(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this {
         this.config.onResponse = fn;
         return this;
     }
 
-    public onError(fn: OnErrorHook): this {
+    public onError(fn: (this: RouteBuilder, error: FastifyError, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this {
         this.config.onError = fn;
         return this;
     }
 
-    public setErrorHandler(fn: ErrorHandlerHook): this {
+    public setErrorHandler(fn: (this: RouteBuilder, error: FastifyError, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this {
         this.config.errorHandler = fn;
         return this;
     }
 
+    // -------------------------------------------
+    // 6) Передача данных между хуками (resolver)
+    // -------------------------------------------
     public resolve<TNewState extends TState>(
         fn: (req: FastifyRequest) => Promise<TNewState> | TNewState
     ): RouteBuilder<Params, Body, Query, Headers, TResponses, TNewState> {
@@ -434,6 +452,10 @@ export class RouteBuilder<
         >;
     }
 
+
+    // --------------------------------
+    // 7) Финальный обработчик
+    // --------------------------------
     public handler(
         fn: (
             req: RequestWithState<Params, Body, Query, Headers, TState>,
@@ -444,10 +466,13 @@ export class RouteBuilder<
         return this;
     }
 
+    // ------------------------------------------------
+    // 8) Кастомные заголовки ответа и Cache-Control
+    // ------------------------------------------------
     public responseHeader<Code extends keyof TResponses>(
         name: string,
         value: string,
-        statusCode: Code
+        statusCode: Code // ✅ Ограничиваем только зарегистрированными статусами
     ): this {
         if (!(statusCode in this.config.schema.response)) {
             throw new Error(
@@ -455,6 +480,7 @@ export class RouteBuilder<
             );
         }
 
+        // Добавляем заголовок в HTTP-ответ (Fastify)
         this.config.responseHeaders[name] = value;
 
         const schema = this.config.schema.response[statusCode as number];
@@ -483,7 +509,9 @@ export class RouteBuilder<
         this.config.fileOptions[field as string] = options;
         return this;
     }
-
+    // ---------------------------------
+    // 10) Модификация маршрута
+    // ---------------------------------
     public modify(
         fn: (routeConfig: RouteOptions & { state?: TState }) => Promise<RouteOptions> | RouteOptions
     ): this {
@@ -491,6 +519,9 @@ export class RouteBuilder<
         return this;
     }
 
+    // --------------------------------------
+    // 11) Регистрация маршрута (build)
+    // --------------------------------------
     public async build(): Promise<void> {
         const {
             method,
@@ -599,6 +630,8 @@ export class RouteBuilder<
                         const options = fileOptions[file.fieldname] || defaultOptions;
 
                         if (!options) continue;
+
+                        // Проверка максимального размера
                         if (options.maxFileSize && file.filesize > options.maxFileSize) {
                             errors.push(`File "${file.filename}" exceeds max size of ${options.maxFileSize} bytes.`);
                         }
@@ -708,7 +741,7 @@ export class RouteBuilder<
         if (modify) {
             newRouteOptions = await modify(newRouteOptions);
         }
+
         this.fastify.route(newRouteOptions);
     }
 }
-
