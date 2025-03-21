@@ -18,6 +18,7 @@ export class RouteBuilder {
         guards: [],
         preHandlers: [],
         preValidation: null,
+        version: null,
         preParsing: null,
         preSerialization: null,
         onRequest: null,
@@ -75,6 +76,10 @@ export class RouteBuilder {
     }
     responseType(type) {
         this.config.responseType = type;
+        return this;
+    }
+    version(version) {
+        this.config.version = version;
         return this;
     }
     // -------------------------
@@ -290,7 +295,7 @@ export class RouteBuilder {
     // 11) Регистрация маршрута (build)
     // --------------------------------------
     async build() {
-        const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError } = this.config;
+        const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError, version } = this.config;
         if (!handler) {
             throw new Error('Handler is required');
         }
@@ -343,9 +348,13 @@ export class RouteBuilder {
                 });
             }
         };
+        let fullUrl = url.startsWith('/') ? url : `/${url}`;
+        if (version) {
+            fullUrl = `/v${version}${fullUrl}`;
+        }
         let newRouteOptions = {
             method,
-            url,
+            url: fullUrl,
             schema: extendedSchema,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);

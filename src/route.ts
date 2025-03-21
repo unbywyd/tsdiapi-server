@@ -97,6 +97,7 @@ export interface RouteConfig<TState = unknown> {
     handler?: HandlerFn;
     tags?: string[];
     summary?: string;
+    version?: string;
     description?: string;
     security?: Array<{ [key: string]: string[] }>;
 }
@@ -142,6 +143,7 @@ export class RouteBuilder<
         guards: [],
         preHandlers: [],
         preValidation: null,
+        version: null,
         preParsing: null,
         preSerialization: null,
         onRequest: null,
@@ -210,6 +212,11 @@ export class RouteBuilder<
 
     public responseType(type: string): this {
         this.config.responseType = type;
+        return this;
+    }
+
+    public version(version: string): this {
+        this.config.version = version;
         return this;
     }
 
@@ -548,7 +555,8 @@ export class RouteBuilder<
             onRequest,
             onSend,
             onResponse,
-            onError
+            onError,
+            version
         } = this.config;
 
         if (!handler) {
@@ -605,9 +613,13 @@ export class RouteBuilder<
             }
         }
 
+        let fullUrl = url.startsWith('/') ? url : `/${url}`;
+        if (version) {
+            fullUrl = `/v${version}${fullUrl}`;
+        }
         let newRouteOptions: RouteOptions = {
             method,
-            url,
+            url: fullUrl,
             schema: extendedSchema,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);

@@ -58,6 +58,7 @@ export interface RouteConfig<TState = unknown> {
     handler?: HandlerFn;
     tags?: string[];
     summary?: string;
+    version?: string;
     description?: string;
     security?: Array<{
         [key: string]: string[];
@@ -95,6 +96,7 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     consumes(consumes: string[]): this;
     text(): this;
     responseType(type: string): this;
+    version(version: string): this;
     get(path: string): this;
     post(path: string): this;
     put(path: string): this;
