@@ -95,6 +95,7 @@ export interface RouteConfig<TState = unknown> {
     responseType?: string;
     cacheControl?: string;
     handler?: HandlerFn;
+    prefix?: string;
     tags?: string[];
     summary?: string;
     version?: string;
@@ -142,6 +143,7 @@ export class RouteBuilder<
         schema: { response: {} },
         guards: [],
         preHandlers: [],
+        prefix: '/api',
         preValidation: null,
         version: null,
         preParsing: null,
@@ -556,7 +558,8 @@ export class RouteBuilder<
             onSend,
             onResponse,
             onError,
-            version
+            version,
+            prefix
         } = this.config;
 
         if (!handler) {
@@ -613,13 +616,13 @@ export class RouteBuilder<
             }
         }
 
-        let fullUrl = url.startsWith('/') ? url : `/${url}`;
+        let finalUrl = url.startsWith('/') ? url : `/${url}`;
         if (version) {
-            fullUrl = `/v${version}${fullUrl}`;
+            finalUrl = `${(prefix && prefix?.startsWith('/') ? prefix : (prefix ? `/${prefix}` : ''))}/v${version}${finalUrl}`;
         }
         let newRouteOptions: RouteOptions = {
             method,
-            url: fullUrl,
+            url: finalUrl,
             schema: extendedSchema,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);

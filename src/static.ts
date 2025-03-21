@@ -11,8 +11,12 @@ export async function setupStatic(fastify: FastifyInstance, context: AppContext,
     const staticOptions = 'function' === typeof appOptions?.staticOptions ? appOptions?.staticOptions : (defaultOptions: FastifyStaticOptions) => defaultOptions;
     await fastify.register(fastifyStatic, staticOptions({
         root: path.join(context.appDir, 'public'),
-        prefix: '/public/',
+        prefix: '/',
+        index: ["index.html"],
     }));
+    fastify.get("/", async (req, reply) => {
+        return reply.sendFile("index.html");
+    });
 }
 
 

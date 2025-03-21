@@ -56,6 +56,7 @@ export interface RouteConfig<TState = unknown> {
     responseType?: string;
     cacheControl?: string;
     handler?: HandlerFn;
+    prefix?: string;
     tags?: string[];
     summary?: string;
     version?: string;
