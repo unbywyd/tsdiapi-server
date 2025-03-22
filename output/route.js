@@ -1,5 +1,7 @@
 import { Type, } from '@sinclair/typebox';
 import { fileTypeFromBuffer } from 'file-type';
+import { metadataManager } from './metadata.js';
+const metareg = metadataManager.use('route');
 function groupFilesByFieldname(files) {
     return files.reduce((acc, file) => {
         if (!acc[file.fieldname]) {
@@ -339,14 +341,16 @@ export class RouteBuilder {
             ...schema,
         };
         const onErrorHandler = (error, req, reply) => {
-            if (errorHandler) {
-                errorHandler.call(this, error, req, reply);
-            }
-            else {
-                reply.status(500).send({
-                    status: 500,
-                    data: { error: 'Internal server error' },
-                });
+            if (error) {
+                if (errorHandler) {
+                    errorHandler.call(this, error, req, reply);
+                }
+                else {
+                    reply.status(500).send({
+                        status: 500,
+                        data: { error: error.message },
+                    });
+                }
             }
         };
         let finalUrl = url.startsWith('/') ? url : `/${url}`;
@@ -475,6 +479,15 @@ export class RouteBuilder {
                 }
             }
         };
+        metareg({
+            name: `${method} ${finalUrl}`,
+            metadata: {
+                schema: extendedSchema,
+                method,
+                url: finalUrl,
+                version: version || ''
+            }
+        });
         if (modify) {
             newRouteOptions = await modify(newRouteOptions);
         }

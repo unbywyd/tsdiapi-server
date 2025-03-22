@@ -2,6 +2,8 @@ import { FastifyError, FastifyInstance, FastifyReply, FastifyRequest, RouteOptio
 import { Static, TSchema, Type, } from '@sinclair/typebox';
 import { AppContext, UploadFile } from './types.js';
 import { fileTypeFromBuffer } from 'file-type';
+import { metadataManager } from './metadata.js';
+const metareg = metadataManager.use('route');
 
 export type FileOptions = {
     maxFileSize?: number;
@@ -606,13 +608,15 @@ export class RouteBuilder<
         }
 
         const onErrorHandler = (error: FastifyError, req: FastifyRequest, reply: FastifyReply) => {
-            if (errorHandler) {
-                errorHandler.call(this, error, req, reply);
-            } else {
-                reply.status(500).send({
-                    status: 500,
-                    data: { error: 'Internal server error' },
-                });
+            if (error) {
+                if (errorHandler) {
+                    errorHandler.call(this, error, req, reply);
+                } else {
+                    reply.status(500).send({
+                        status: 500,
+                        data: { error: error.message },
+                    });
+                }
             }
         }
 
@@ -752,6 +756,16 @@ export class RouteBuilder<
                 }
             }
         };
+
+        metareg({
+            name: `${method} ${finalUrl}`,
+            metadata: {
+                schema: extendedSchema,
+                method,
+                url: finalUrl,
+                version: version || ''
+            }
+        });
 
         if (modify) {
             newRouteOptions = await modify(newRouteOptions);

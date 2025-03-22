@@ -16,6 +16,7 @@ import { Container } from 'typedi';
 import { RouteBuilder } from './route.js';
 export * from './types.js';
 export * from './route.js';
+export * from './metadata.js';
 export async function createApp(options = {}) {
     const fastifyOptions = 'function' === typeof options.fastifyOptions ? options.fastifyOptions : (defaultOptions) => defaultOptions;
     const fastify = Fastify(fastifyOptions({
