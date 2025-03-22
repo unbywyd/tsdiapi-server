@@ -1,7 +1,5 @@
 import { Type, } from '@sinclair/typebox';
 import { fileTypeFromBuffer } from 'file-type';
-import { metadataManager } from './metadata.js';
-const metareg = metadataManager.use('route');
 function groupFilesByFieldname(files) {
     return files.reduce((acc, file) => {
         if (!acc[file.fieldname]) {
@@ -479,15 +477,6 @@ export class RouteBuilder {
                 }
             }
         };
-        metareg({
-            name: `${method} ${finalUrl}`,
-            metadata: {
-                schema: extendedSchema,
-                method,
-                url: finalUrl,
-                version: version || ''
-            }
-        });
         if (modify) {
             newRouteOptions = await modify(newRouteOptions);
         }

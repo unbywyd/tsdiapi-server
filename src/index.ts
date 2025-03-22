@@ -20,7 +20,6 @@ import { TSchema } from '@sinclair/typebox';
 
 export * from './types.js';
 export * from './route.js';
-export * from './metadata.js';
 
 export async function createApp<T extends object = Record<string, any>>(options: AppOptions<T> = {}): Promise<AppContext<T> | null> {
     const fastifyOptions = 'function' === typeof options.fastifyOptions ? options.fastifyOptions : (defaultOptions: FastifyServerOptions) => defaultOptions;

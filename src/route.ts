@@ -2,8 +2,6 @@ import { FastifyError, FastifyInstance, FastifyReply, FastifyRequest, RouteOptio
 import { Static, TSchema, Type, } from '@sinclair/typebox';
 import { AppContext, UploadFile } from './types.js';
 import { fileTypeFromBuffer } from 'file-type';
-import { metadataManager } from './metadata.js';
-const metareg = metadataManager.use('route');
 
 export type FileOptions = {
     maxFileSize?: number;
@@ -756,16 +754,6 @@ export class RouteBuilder<
                 }
             }
         };
-
-        metareg({
-            name: `${method} ${finalUrl}`,
-            metadata: {
-                schema: extendedSchema,
-                method,
-                url: finalUrl,
-                version: version || ''
-            }
-        });
 
         if (modify) {
             newRouteOptions = await modify(newRouteOptions);
