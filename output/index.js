@@ -48,9 +48,10 @@ export async function createApp(options = {}) {
             return builder;
         }
         context.useRoute = useRoute;
+        const host = context.projectConfig.get('HOST', 'localhost');
         const appOptions = {
-            PORT: await findAvailablePort(context.projectConfig.get('PORT', 3000)),
-            HOST: context.projectConfig.get('HOST', 'localhost'),
+            PORT: await findAvailablePort(host, context.projectConfig.get('PORT', 3000)),
+            HOST: host,
             APP_NAME: context.projectPackage.name || context.projectConfig.get('APP_NAME', 'TSDIAPI Server'),
             APP_VERSION: context.projectPackage.version || context.projectConfig.get('APP_VERSION', '1.0.0'),
         };
@@ -106,10 +107,6 @@ export async function createApp(options = {}) {
                         Container.get(service);
                     }
                 }
-                if (plugin?.loadFileTypes?.length) {
-                    loadExtensions.push(...plugin.loadFileTypes);
-                    console.log(cristal(`Plugin "${plugin.name}" has auto-loaded file types: ${plugin.loadFileTypes.join(", ")}, the files will be included in the server.`));
-                }
             }
         }
         if (options?.onInit) {
@@ -121,7 +118,7 @@ export async function createApp(options = {}) {
                 process.exit(1);
             }
         }
-        fastify.get("/404", function (req, res) {
+        fastify.get("/404", function (_, res) {
             res.status(404).send({ status: 404, message: "Page Not Found!" });
         });
         fastify.addHook('preValidation', async (req) => {
@@ -150,6 +147,7 @@ export async function createApp(options = {}) {
             }
         });
         loadExtensions.push('module');
+        loadExtensions.push('load');
         for (const ext of loadExtensions) {
             const extdi = `${ext}.dl`;
             await fileLoader(makeLoadPath(apiRelativePath, extdi), context.appDir, true);

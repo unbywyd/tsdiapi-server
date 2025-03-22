@@ -72,9 +72,10 @@ export async function createApp<T extends object = Record<string, any>>(options:
 
         context.useRoute = useRoute;
 
+        const host = context.projectConfig.get('HOST', 'localhost') as string;
         const appOptions: AppMainOptions = {
-            PORT: await findAvailablePort(context.projectConfig.get('PORT', 3000) as number),
-            HOST: context.projectConfig.get('HOST', 'localhost') as string,
+            PORT: await findAvailablePort(host, context.projectConfig.get('PORT', 3000) as number),
+            HOST: host,
             APP_NAME: context.projectPackage.name || context.projectConfig.get('APP_NAME', 'TSDIAPI Server'),
             APP_VERSION: context.projectPackage.version || context.projectConfig.get('APP_VERSION', '1.0.0'),
         };
@@ -133,10 +134,6 @@ export async function createApp<T extends object = Record<string, any>>(options:
                         Container.get(service);
                     }
                 }
-                if (plugin?.loadFileTypes?.length) {
-                    loadExtensions.push(...plugin.loadFileTypes);
-                    console.log(cristal(`Plugin "${plugin.name}" has auto-loaded file types: ${plugin.loadFileTypes.join(", ")}, the files will be included in the server.`));
-                }
             }
         }
 
@@ -148,7 +145,7 @@ export async function createApp<T extends object = Record<string, any>>(options:
                 process.exit(1);
             }
         }
-        fastify.get("/404", function (req, res) {
+        fastify.get("/404", function (_, res) {
             res.status(404).send({ status: 404, message: "Page Not Found!" });
         });
 
@@ -177,6 +174,7 @@ export async function createApp<T extends object = Record<string, any>>(options:
         });
 
         loadExtensions.push('module');
+        loadExtensions.push('load');
 
         for (const ext of loadExtensions) {
             const extdi = `${ext}.dl`;

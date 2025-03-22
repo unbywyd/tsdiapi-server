@@ -53,8 +53,7 @@ export interface AppContext<T extends object = Record<string, any>> {
 export type Constructor<T = any> = new (...args: any[]) => T;
 export interface AppPlugin<T extends object = Record<string, any>, P extends object = Record<string, any>> {
     name: string;
-    loadFileTypes?: string[];
-    services: Constructor<unknown>[];
+    services?: Constructor<unknown>[];
     config?: P;
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;
