@@ -314,17 +314,6 @@ export class RouteBuilder<
             this.config.schema.headers = Type.Object({});
         }
 
-        if (!("Authorization" in (this.config.schema.headers as any).properties)) {
-            this.config.schema.headers = Type.Composite([
-                this.config.schema.headers,
-                Type.Object({
-                    Authorization: Type.String({
-                        description: `Authorization token (${type.toUpperCase()})`
-                    })
-                })
-            ]);
-        }
-
         if (guard) {
             this.guard(guard);
         }
