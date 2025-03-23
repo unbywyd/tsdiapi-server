@@ -37,8 +37,11 @@ export async function createApp(options = {}) {
             context.fileLoader = options.fileLoader;
         }
         const pendingBuilds = [];
-        function useRoute() {
+        function useRoute(controller) {
             const builder = new RouteBuilder(context);
+            if (controller) {
+                builder.controller(controller);
+            }
             const originalBuild = builder.build;
             builder.build = async function () {
                 const buildPromise = originalBuild.call(builder);

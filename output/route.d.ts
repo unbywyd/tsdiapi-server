@@ -57,6 +57,7 @@ export interface RouteConfig<TState = unknown> {
     cacheControl?: string;
     handler?: HandlerFn;
     prefix?: string;
+    controller?: string;
     tags?: string[];
     summary?: string;
     version?: string;
@@ -65,6 +66,7 @@ export interface RouteConfig<TState = unknown> {
         [key: string]: string[];
     }>;
 }
+export declare function trimSlashes(input: string): string;
 declare module 'fastify' {
     interface FastifyRequest {
         routeData?: unknown;
@@ -86,6 +88,7 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     fastify: FastifyInstance;
     constructor(appContext: AppContext<Record<string, any>>);
     setRequestFormat(contentType: string): this;
+    controller(controllerPath: string): this;
     acceptJson(): this;
     acceptMultipart(): this;
     acceptText(): this;
@@ -98,12 +101,12 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     text(): this;
     responseType(type: string): this;
     version(version: string): this;
-    get(path: string): this;
-    post(path: string): this;
-    put(path: string): this;
-    delete(path: string): this;
-    patch(path: string): this;
-    options(path: string): this;
+    get(path?: string): this;
+    post(path?: string): this;
+    put(path?: string): this;
+    delete(path?: string): this;
+    patch(path?: string): this;
+    options(path?: string): this;
     tags(tags: string[]): this;
     summary(summary: string): this;
     description(description: string): this;

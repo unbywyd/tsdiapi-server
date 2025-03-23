@@ -9,6 +9,9 @@ function groupFilesByFieldname(files) {
         return acc;
     }, {});
 }
+export function trimSlashes(input) {
+    return input.replace(/^[/\\]+|[/\\]+$/g, '');
+}
 export class RouteBuilder {
     appContext;
     config = {
@@ -41,6 +44,17 @@ export class RouteBuilder {
             this.config.isMultipart = true;
         }
         this.config.schema.consumes = [contentType];
+        return this;
+    }
+    controller(controllerPath) {
+        const cleanedPath = trimSlashes(controllerPath);
+        const [controller, ...rest] = cleanedPath.split('/');
+        const remainingUrl = rest.join('/');
+        this.config.controller = controller;
+        if (remainingUrl) {
+            this.config.url = `/${remainingUrl}`;
+        }
+        this.tags([controller]);
         return this;
     }
     acceptJson() {
@@ -88,32 +102,44 @@ export class RouteBuilder {
     // -------------------------
     get(path) {
         this.config.method = 'GET';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
     post(path) {
         this.config.method = 'POST';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
     put(path) {
         this.config.method = 'PUT';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
     delete(path) {
         this.config.method = 'DELETE';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
     patch(path) {
         this.config.method = 'PATCH';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
     options(path) {
         this.config.method = 'OPTIONS';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
     // Swagger-совместимость
@@ -296,7 +322,7 @@ export class RouteBuilder {
     // 11) Регистрация маршрута (build)
     // --------------------------------------
     async build() {
-        const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError, version, prefix } = this.config;
+        const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError, version, prefix, controller } = this.config;
         if (!handler) {
             throw new Error('Handler is required');
         }
@@ -351,13 +377,15 @@ export class RouteBuilder {
                 }
             }
         };
-        let finalUrl = url.startsWith('/') ? url : `/${url}`;
-        if (version) {
-            finalUrl = `${(prefix && prefix?.startsWith('/') ? prefix : (prefix ? `/${prefix}` : ''))}/v${version}${finalUrl}`;
-        }
+        const cleanedPrefix = trimSlashes(prefix || '');
+        const cleanedController = trimSlashes(controller || '');
+        const cleanedUrl = trimSlashes(url || '');
+        const _prefix = cleanedPrefix ? `${cleanedPrefix}/` : '';
+        const _controller = cleanedController ? `${cleanedController}/` : '';
+        const _version = version ? `v${version}/` : '';
         let newRouteOptions = {
             method,
-            url: finalUrl,
+            url: `/${_prefix}${_controller}${_version}${cleanedUrl}`,
             schema: extendedSchema,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);
