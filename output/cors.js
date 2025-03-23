@@ -34,5 +34,6 @@ export async function setupCors(fastify, corsOptions) {
         options = corsOptions;
     }
     await fastify.register(cors, options);
+    return options;
 }
 //# sourceMappingURL=cors.js.map

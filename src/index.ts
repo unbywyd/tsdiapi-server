@@ -105,7 +105,8 @@ export async function createApp<T extends object = Record<string, any>>(options:
                 this.tempFiles.push(file);
             }
         }));
-        await setupCors(fastify, options.corsOptions);
+        const corsOptions = await setupCors(fastify, options.corsOptions);
+        context.options.corsOptions = corsOptions;
         await setupHelmet(fastify, options.helmetOptions);
 
         const uiSwaggerOptions = await setupSwagger(fastify, options, appOptions);

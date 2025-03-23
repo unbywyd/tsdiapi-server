@@ -80,7 +80,8 @@ export async function createApp(options = {}) {
                 this.tempFiles.push(file);
             }
         }));
-        await setupCors(fastify, options.corsOptions);
+        const corsOptions = await setupCors(fastify, options.corsOptions);
+        context.options.corsOptions = corsOptions;
         await setupHelmet(fastify, options.helmetOptions);
         const uiSwaggerOptions = await setupSwagger(fastify, options, appOptions);
         await setupStatic(fastify, context, options);

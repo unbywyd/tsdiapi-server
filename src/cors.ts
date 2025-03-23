@@ -36,4 +36,5 @@ export async function setupCors(fastify: FastifyInstance, corsOptions?: AppOptio
         options = corsOptions
     }
     await fastify.register(cors, options);
+    return options;
 }
