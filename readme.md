@@ -30,8 +30,9 @@ Your API is now running! 🎉 Open the browser and check **Swagger UI** at:
 ## 🛠 Features
 
 ✅ **Fastify Core** – High-performance HTTP server  
+✅ **ESM Support** – Modern ECMAScript modules
+✅ **TypeScript** – Strongly-typed language
 ✅ **TypeBox Validation** – Type-safe request validation  
-✅ **Dependency Injection** – Built-in DI via `TypeDI`  
 ✅ **Modular Structure** – Auto-load controllers and services  
 ✅ **Swagger API Docs** – Auto-generated OpenAPI documentation  
 ✅ **CORS & Security** – Preconfigured CORS & Helmet support  
