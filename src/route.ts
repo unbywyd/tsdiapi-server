@@ -96,12 +96,18 @@ export interface RouteConfig<TState = unknown> {
     cacheControl?: string;
     handler?: HandlerFn;
     prefix?: string;
+    controller?: string;
     tags?: string[];
     summary?: string;
     version?: string;
     description?: string;
     security?: Array<{ [key: string]: string[] }>;
 }
+
+export function trimSlashes(input: string): string {
+    return input.replace(/^[/\\]+|[/\\]+$/g, '');
+}
+
 
 declare module 'fastify' {
     interface FastifyRequest {
@@ -172,6 +178,18 @@ export class RouteBuilder<
         return this;
     }
 
+    public controller(controllerPath: string): this {
+        const cleanedPath = trimSlashes(controllerPath);
+        const [controller, ...rest] = cleanedPath.split('/');
+        const remainingUrl = rest.join('/');
+        this.config.controller = controller;
+        if (remainingUrl) {
+            this.config.url = `/${remainingUrl}`;
+        }
+        this.tags([controller]);
+        return this;
+    }
+
     public acceptJson(): this {
         return this.setRequestFormat('application/json');
     }
@@ -226,39 +244,51 @@ export class RouteBuilder<
     // 2) HTTP-методы
     // -------------------------
 
-    public get(path: string): this {
+    public get(path?: string): this {
         this.config.method = 'GET';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
 
-    public post(path: string): this {
+    public post(path?: string): this {
         this.config.method = 'POST';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
 
-    public put(path: string): this {
+    public put(path?: string): this {
         this.config.method = 'PUT';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
 
-    public delete(path: string): this {
+    public delete(path?: string): this {
         this.config.method = 'DELETE';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
 
-    public patch(path: string): this {
+    public patch(path?: string): this {
         this.config.method = 'PATCH';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
 
-    public options(path: string): this {
+    public options(path?: string): this {
         this.config.method = 'OPTIONS';
-        this.config.url = path;
+        if (path) {
+            this.config.url = path;
+        }
         return this;
     }
 
@@ -559,7 +589,8 @@ export class RouteBuilder<
             onResponse,
             onError,
             version,
-            prefix
+            prefix,
+            controller
         } = this.config;
 
         if (!handler) {
@@ -618,13 +649,18 @@ export class RouteBuilder<
             }
         }
 
-        let finalUrl = url.startsWith('/') ? url : `/${url}`;
-        if (version) {
-            finalUrl = `${(prefix && prefix?.startsWith('/') ? prefix : (prefix ? `/${prefix}` : ''))}/v${version}${finalUrl}`;
-        }
+
+        const cleanedPrefix = trimSlashes(prefix || '');
+        const cleanedController = trimSlashes(controller || '');
+        const cleanedUrl = trimSlashes(url || '');
+
+        const _prefix = cleanedPrefix ? `${cleanedPrefix}/` : '';
+        const _controller = cleanedController ? `${cleanedController}/` : '';
+        const _version = version ? `v${version}/` : '';
+
         let newRouteOptions: RouteOptions = {
             method,
-            url: finalUrl,
+            url: `/${_prefix}${_controller}${_version}${cleanedUrl}`,
             schema: extendedSchema,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);

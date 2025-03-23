@@ -50,7 +50,7 @@ export async function createApp<T extends object = Record<string, any>>(options:
             Headers extends TSchema = TSchema,
             TResponses extends StatusSchemas = {},
             TState = unknown
-        >(): RouteBuilder<Params, Body, Query, Headers, TResponses, TState> {
+        >(controller?: string): RouteBuilder<Params, Body, Query, Headers, TResponses, TState> {
             const builder = new RouteBuilder<
                 Params,
                 Body,
@@ -59,6 +59,10 @@ export async function createApp<T extends object = Record<string, any>>(options:
                 TResponses,
                 TState
             >(context);
+
+            if (controller) {
+                builder.controller(controller);
+            }
 
             const originalBuild = builder.build;
             builder.build = async function () {
