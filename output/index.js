@@ -152,7 +152,7 @@ export async function createApp(options = {}) {
         loadExtensions.push('module');
         loadExtensions.push('load');
         for (const ext of loadExtensions) {
-            const extdi = `${ext}.dl`;
+            const extdi = `${ext}.di`;
             await fileLoader(makeLoadPath(apiRelativePath, extdi), context.appDir, true);
             await fileLoaderWithContext(makeLoadPath(apiRelativePath, ext), context, context.appDir);
         }

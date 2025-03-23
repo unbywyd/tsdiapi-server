@@ -181,7 +181,7 @@ export async function createApp<T extends object = Record<string, any>>(options:
         loadExtensions.push('load');
 
         for (const ext of loadExtensions) {
-            const extdi = `${ext}.dl`;
+            const extdi = `${ext}.di`;
             await fileLoader(makeLoadPath(apiRelativePath, extdi), context.appDir, true);
             await fileLoaderWithContext(makeLoadPath(apiRelativePath, ext), context, context.appDir);
         }
