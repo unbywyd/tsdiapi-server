@@ -52,13 +52,12 @@ export async function setupSwagger(fastify: FastifyInstance, appOptions: AppOpti
     const extendOptions = swaggerUiOptionsHandler({
         routePrefix: '/docs',
         uiConfig: {
-            docExpansion: 'full',
-            deepLinking: false,
+            docExpansion: 'none',
+            deepLinking: false
         },
         staticCSP: true,
-        transformSpecificationClone: true,
-
-    })
+        transformSpecificationClone: true
+    });
     await fastify.register(fastifySwaggerUi, extendOptions);
     return extendOptions;
 }
