@@ -1,5 +1,5 @@
 import { FastifyError, FastifyInstance, FastifyReply, FastifyRequest, RouteOptions } from 'fastify';
-import { Static, TSchema, Type, } from '@sinclair/typebox';
+import { Static, TSchema, TString, Type, } from '@sinclair/typebox';
 import { AppContext, UploadFile } from './types.js';
 import { fileTypeFromBuffer } from 'file-type';
 
@@ -8,6 +8,17 @@ export type FileOptions = {
     accept?: string[];
     maxFiles?: number;
 };
+
+export function DateString(defaultValue?: string | Date) {
+    return Type.String({
+        format: 'date-time',
+        ...(defaultValue ? {
+            default: new Date(defaultValue).toISOString()
+        } : {})
+    }) as unknown as TDateStringSchema;
+}
+type TDateStringSchema = TString & { static: Date};
+
 function groupFilesByFieldname(files: UploadFile[]): Record<string, UploadFile[]> {
     return files.reduce<Record<string, UploadFile[]>>((acc, file) => {
         if (!acc[file.fieldname]) {

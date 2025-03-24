@@ -154,6 +154,41 @@ export async function createApp<T extends object = Record<string, any>>(options:
             res.status(404).send({ status: 404, message: "Page Not Found!" });
         });
 
+        fastify.addHook('preHandler', async (req, _reply) => {
+            if (req.body && typeof req.body === 'object') {
+                req.body = convertDates(req.body);
+            }
+        });
+        function convertDates(obj: any): any {
+            if (Array.isArray(obj)) {
+                return obj.map(convertDates);
+            } else if (obj !== null && typeof obj === 'object') {
+                return Object.fromEntries(
+                    Object.entries(obj).map(([key, value]) => {
+                        if (typeof value === 'string' && isISODate(value)) {
+                            return [key, new Date(value)];
+                        } else if (typeof value === 'object') {
+                            return [key, convertDates(value)];
+                        }
+                        return [key, value];
+                    })
+                );
+            }
+            return obj;
+        }
+        function isISODate(_value: string): boolean {
+            try {
+                if (!_value) return false;
+                const value = _value.trim();
+                if (value.length < 10 || !value.includes('T')) return false;
+                if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?/.test(value)) return false;
+                const date = new Date(value);
+                return !isNaN(date.getTime());
+            } catch (error) {
+                return false;
+            }
+        }
+
         fastify.addHook('preValidation', async (req) => {
             if (req.isMultipart()) {
                 const body: Record<string, any> = req.body as Record<string, any>;

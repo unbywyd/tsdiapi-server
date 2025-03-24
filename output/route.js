@@ -1,5 +1,13 @@
 import { Type, } from '@sinclair/typebox';
 import { fileTypeFromBuffer } from 'file-type';
+export function DateString(defaultValue) {
+    return Type.String({
+        format: 'date-time',
+        ...(defaultValue ? {
+            default: new Date(defaultValue).toISOString()
+        } : {})
+    });
+}
 function groupFilesByFieldname(files) {
     return files.reduce((acc, file) => {
         if (!acc[file.fieldname]) {
