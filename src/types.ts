@@ -51,9 +51,9 @@ export interface AppContext<T extends object = Record<string, any>> {
     options: AppOptions<T>;
     fileLoader?: FileLoader;
     projectConfig: AppConfig<T>;
-    projectPackage: Record<string, any>;
+    projectPackage: Record<string, any>; 
     plugins?: Record<string, AppPlugin>;
-    useRoute: <Params extends TObject = TObject, Body extends TObject = TObject, Query extends TObject = TObject, Headers extends TObject = TObject, TResponses extends StatusSchemas = {}, TState = unknown>() => RouteBuilder<Params, Body, Query, Headers, TResponses, TState>;
+    useRoute: <Params extends TObject = TObject, Body extends TObject = TObject, Query extends TObject = TObject, Headers extends TObject = TObject, TResponses extends StatusSchemas = {}, TState = unknown>(controller?: string) => RouteBuilder<Params, Body, Query, Headers, TResponses, TState>;
 }
 
 export type Constructor<T = any> = new (...args: any[]) => T;
