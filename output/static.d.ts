@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify/fastify.js';
+import { FastifyStaticOptions } from '@fastify/static';
 import { AppContext, AppOptions } from './types.js';
-export declare function setupStatic(fastify: FastifyInstance, context: AppContext, appOptions: AppOptions): Promise<void>;
+export declare function setupStatic(context: AppContext, appOptions: AppOptions): false | FastifyStaticOptions;
 //# sourceMappingURL=static.d.ts.map

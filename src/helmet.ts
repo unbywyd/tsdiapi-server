@@ -1,5 +1,4 @@
 import helmet, { FastifyHelmetOptions } from '@fastify/helmet';
-import { FastifyInstance } from "fastify";
 import { AppOptions } from "./types.js";
 
 const defaultHelmet: FastifyHelmetOptions = {
@@ -30,13 +29,13 @@ const defaultHelmet: FastifyHelmetOptions = {
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }
 
-export async function setupHelmet(fastify: FastifyInstance, helmetOptions?: AppOptions['helmetOptions']) {
+export function setupHelmet(helmetOptions?: AppOptions['helmetOptions']) {
     let options: FastifyHelmetOptions = defaultHelmet;
-    if (helmetOptions === false) return;
+    if (helmetOptions === false) return false;
     if ('function' === typeof helmetOptions) {
         options = helmetOptions(defaultHelmet);
     } else if ('object' === typeof helmetOptions) {
         options = helmetOptions
     }
-    await fastify.register(helmet, options);
+    return options;
 }

@@ -1,5 +1,4 @@
-import cors, { FastifyCorsOptions } from '@fastify/cors';
-import { FastifyInstance } from 'fastify';
+import { FastifyCorsOptions } from '@fastify/cors';
 import { AppOptions } from './types.js';
 
 /*
@@ -27,7 +26,7 @@ const defaultCors: FastifyCorsOptions = {
     ]
 }
 
-export async function setupCors(fastify: FastifyInstance, corsOptions?: AppOptions['corsOptions']) {
+export async function setupCors(corsOptions?: AppOptions['corsOptions']) {
     let options: FastifyCorsOptions = defaultCors;
     if (corsOptions === false) return;
     if ('function' === typeof corsOptions) {
@@ -35,6 +34,5 @@ export async function setupCors(fastify: FastifyInstance, corsOptions?: AppOptio
     } else if ('object' === typeof corsOptions) {
         options = corsOptions
     }
-    await fastify.register(cors, options);
     return options;
 }

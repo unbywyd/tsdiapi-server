@@ -1,5 +1,4 @@
-import cors from '@fastify/cors';
-import { FastifyInstance } from 'fastify';
+import { FastifyCorsOptions } from '@fastify/cors';
 import { AppOptions } from './types.js';
-export declare function setupCors(fastify: FastifyInstance, corsOptions?: AppOptions['corsOptions']): Promise<cors.FastifyCorsOptions>;
+export declare function setupCors(corsOptions?: AppOptions['corsOptions']): Promise<FastifyCorsOptions>;
 //# sourceMappingURL=cors.d.ts.map

@@ -1,21 +1,18 @@
 /*
 *   Swagger Configuration
 */
-import { FastifyInstance } from 'fastify/fastify.js';
-import fastifyStatic, { FastifyStaticOptions } from '@fastify/static';
-
+import { FastifyStaticOptions } from '@fastify/static';
 import { AppContext, AppOptions } from './types.js';
 import path from 'node:path';
 
-export async function setupStatic(fastify: FastifyInstance, context: AppContext, appOptions: AppOptions) {
+export function setupStatic(context: AppContext, appOptions: AppOptions) {
+    if (!appOptions?.staticOptions) return false;
     const staticOptions = 'function' === typeof appOptions?.staticOptions ? appOptions?.staticOptions : (defaultOptions: FastifyStaticOptions) => defaultOptions;
-    await fastify.register(fastifyStatic, staticOptions({
+
+    return staticOptions({
         root: path.join(context.appDir, 'public'),
         prefix: '/',
         index: ["index.html"],
-    }));
-    fastify.get("/", async (req, reply) => {
-        return reply.sendFile("index.html");
     });
 }
 

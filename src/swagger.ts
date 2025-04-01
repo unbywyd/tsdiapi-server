@@ -2,18 +2,20 @@
 /*
 *   Swagger Configuration
 */
-import fastifySwagger, { FastifyDynamicSwaggerOptions } from '@fastify/swagger';
-import fastifySwaggerUi, { FastifySwaggerUiOptions } from '@fastify/swagger-ui';
-import { FastifyInstance } from 'fastify/fastify.js';
+import { FastifyDynamicSwaggerOptions } from '@fastify/swagger';
+import { FastifySwaggerUiOptions } from '@fastify/swagger-ui';
 import { AppMainOptions, AppOptions } from './types.js';
 
-export async function setupSwagger(fastify: FastifyInstance, appOptions: AppOptions, options?: AppMainOptions): Promise<FastifySwaggerUiOptions> {
+export function setupSwagger(appOptions: AppOptions, options?: AppMainOptions): {
+    swaggerOptions: FastifyDynamicSwaggerOptions;
+    swaggerUiOptions: FastifySwaggerUiOptions;
+} {
     const appName = options?.APP_NAME;
     const host = options?.HOST;
     const port = options?.PORT;
     const version = options?.APP_VERSION;
     const swaggerOptionsHandler = 'function' === typeof appOptions?.swaggerOptions ? appOptions?.swaggerOptions : (defaultOptions: FastifyDynamicSwaggerOptions) => defaultOptions;
-    await fastify.register(fastifySwagger, swaggerOptionsHandler({
+    const swaggerOptions = swaggerOptionsHandler({
         openapi: {
             info: {
                 title: appName,
@@ -47,9 +49,9 @@ export async function setupSwagger(fastify: FastifyInstance, appOptions: AppOpti
             },
             security: []
         },
-    }));
+    });
     const swaggerUiOptionsHandler = 'function' === typeof appOptions?.swaggerUiOptions ? appOptions?.swaggerUiOptions : (defaultOptions: FastifySwaggerUiOptions) => defaultOptions;
-    const extendOptions = swaggerUiOptionsHandler({
+    const swaggerUiOptions = swaggerUiOptionsHandler({
         routePrefix: '/docs',
         uiConfig: {
             docExpansion: 'none',
@@ -58,8 +60,10 @@ export async function setupSwagger(fastify: FastifyInstance, appOptions: AppOpti
         staticCSP: true,
         transformSpecificationClone: true
     });
-    await fastify.register(fastifySwaggerUi, extendOptions);
-    return extendOptions;
+    return {
+        swaggerOptions,
+        swaggerUiOptions,
+    }
 }
 
 

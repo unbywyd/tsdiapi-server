@@ -14,6 +14,11 @@ import { makeLoadPath, removeTrailingSlash } from './utils.js';
 import { setupStatic } from './static.js';
 import { Container } from 'typedi';
 import { RouteBuilder } from './route.js';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUi from '@fastify/swagger-ui';
+import fastifyStatic from '@fastify/static';
 export * from './types.js';
 export * from './route.js';
 export async function createApp(options = {}) {
@@ -32,6 +37,30 @@ export async function createApp(options = {}) {
         console.log(pastel.multiline("🚀 Welcome to TSDIAPI!"));
         console.log(rainbow("✨ Starting the server..."));
         const cwd = process.cwd();
+        const multipartOptions = 'function' === typeof options.multipartOptions ? options.multipartOptions : (defaultOptions) => defaultOptions;
+        options.corsOptions = await setupCors(options.corsOptions);
+        options.multipartOptions = multipartOptions({
+            limits: {
+                fileSize: 50 * 1024 * 1024,
+            },
+            attachFieldsToBody: 'keyValues',
+            onFile: async function (part) {
+                const bufferPromise = await part.toBuffer();
+                const uniqId = `${part.fieldname}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const file = {
+                    id: uniqId,
+                    fieldname: part.fieldname,
+                    filename: part.filename,
+                    encoding: part.encoding,
+                    mimetype: part.mimetype,
+                    buffer: bufferPromise,
+                    filesize: bufferPromise.byteLength,
+                };
+                this.tempFiles = this.tempFiles || [];
+                this.tempFiles.push(file);
+            }
+        });
+        options.helmetOptions = setupHelmet(options.helmetOptions);
         const context = await initApp(cwd, options, fastify);
         if (options.fileLoader) {
             context.fileLoader = options.fileLoader;
@@ -58,37 +87,10 @@ export async function createApp(options = {}) {
             APP_NAME: context.projectPackage.name || context.projectConfig.get('APP_NAME', 'TSDIAPI Server'),
             APP_VERSION: context.projectPackage.version || context.projectConfig.get('APP_VERSION', '1.0.0'),
         };
-        const multipartOptions = 'function' === typeof options.multipartOptions ? options.multipartOptions : (defaultOptions) => defaultOptions;
-        await fastify.register(fastifyMultipart, multipartOptions({
-            limits: {
-                fileSize: 50 * 1024 * 1024,
-            },
-            attachFieldsToBody: 'keyValues',
-            onFile: async function (part) {
-                const bufferPromise = await part.toBuffer();
-                const uniqId = `${part.fieldname}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                const file = {
-                    id: uniqId,
-                    fieldname: part.fieldname,
-                    filename: part.filename,
-                    encoding: part.encoding,
-                    mimetype: part.mimetype,
-                    buffer: bufferPromise,
-                    filesize: bufferPromise.byteLength,
-                };
-                this.tempFiles = this.tempFiles || [];
-                this.tempFiles.push(file);
-            }
-        }));
-        const corsOptions = await setupCors(fastify, options.corsOptions);
-        context.options.corsOptions = corsOptions;
-        await setupHelmet(fastify, options.helmetOptions);
-        const uiSwaggerOptions = await setupSwagger(fastify, options, appOptions);
-        await setupStatic(fastify, context, options);
-        const apiDir = path.join(context.appDir, options.apiDir || 'api');
-        const apiRelativePath = removeTrailingSlash(path.relative(context.appDir, apiDir));
-        await ensureDir(apiDir);
-        await fileLoader(makeLoadPath(apiRelativePath, 'service'), context.appDir);
+        const { swaggerOptions, swaggerUiOptions } = setupSwagger(options, appOptions);
+        context.options.swaggerOptions = swaggerOptions;
+        context.options.swaggerUiOptions = swaggerUiOptions;
+        context.options.staticOptions = setupStatic(context, options);
         const loadExtensions = [];
         if (options?.plugins && options.plugins.length > 0) {
             for (const plugin of options.plugins) {
@@ -122,6 +124,29 @@ export async function createApp(options = {}) {
                 process.exit(1);
             }
         }
+        await fastify.register(fastifyMultipart, context.options.multipartOptions);
+        if (context.options.corsOptions) {
+            await fastify.register(cors, context.options.corsOptions);
+        }
+        if (context.options.helmetOptions) {
+            await fastify.register(helmet, context.options.helmetOptions);
+        }
+        if (context.options.swaggerOptions) {
+            await fastify.register(fastifySwagger, context.options.swaggerOptions);
+        }
+        if (context.options.swaggerUiOptions) {
+            await fastify.register(fastifySwaggerUi, context.options.swaggerUiOptions);
+        }
+        if (context.options.staticOptions) {
+            await fastify.register(fastifyStatic, context.options.staticOptions);
+            fastify.get("/", async (_req, reply) => {
+                return reply.sendFile("index.html");
+            });
+        }
+        const apiDir = path.join(context.appDir, options.apiDir || 'api');
+        const apiRelativePath = removeTrailingSlash(path.relative(context.appDir, apiDir));
+        await ensureDir(apiDir);
+        await fileLoader(makeLoadPath(apiRelativePath, 'service'), context.appDir);
         fastify.get("/404", function (_, res) {
             res.status(404).send({ status: 404, message: "Page Not Found!" });
         });
@@ -216,7 +241,7 @@ export async function createApp(options = {}) {
             const environment = context.environment;
             await fastify.listen({ port });
             console.log(passion(`🚀 Server started at http://${appHost}:${port}\n🚨️ Environment: ${environment}`));
-            console.log(vice(`Swagger UI is available at http://${appHost}:${port}${uiSwaggerOptions.routePrefix}`));
+            console.log(vice(`Swagger UI is available at http://${appHost}:${port}${context.options?.swaggerUiOptions?.routePrefix}`));
             if (options?.afterStart) {
                 try {
                     await options.afterStart(context);

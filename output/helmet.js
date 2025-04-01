@@ -1,4 +1,3 @@
-import helmet from '@fastify/helmet';
 const defaultHelmet = {
     contentSecurityPolicy: {
         directives: {
@@ -26,16 +25,16 @@ const defaultHelmet = {
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 };
-export async function setupHelmet(fastify, helmetOptions) {
+export function setupHelmet(helmetOptions) {
     let options = defaultHelmet;
     if (helmetOptions === false)
-        return;
+        return false;
     if ('function' === typeof helmetOptions) {
         options = helmetOptions(defaultHelmet);
     }
     else if ('object' === typeof helmetOptions) {
         options = helmetOptions;
     }
-    await fastify.register(helmet, options);
+    return options;
 }
 //# sourceMappingURL=helmet.js.map

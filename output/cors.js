@@ -1,4 +1,3 @@
-import cors from '@fastify/cors';
 /*
 *   CORS Configuration
 */
@@ -23,7 +22,7 @@ const defaultCors = {
         "access-control-allow-methods"
     ]
 };
-export async function setupCors(fastify, corsOptions) {
+export async function setupCors(corsOptions) {
     let options = defaultCors;
     if (corsOptions === false)
         return;
@@ -33,7 +32,6 @@ export async function setupCors(fastify, corsOptions) {
     else if ('object' === typeof corsOptions) {
         options = corsOptions;
     }
-    await fastify.register(cors, options);
     return options;
 }
 //# sourceMappingURL=cors.js.map

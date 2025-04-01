@@ -1,7 +1,7 @@
 import type { FastifyCorsOptions } from '@fastify/cors';
 import type { FastifyHelmetOptions } from '@fastify/helmet';
 import type { FastifyDynamicSwaggerOptions } from '@fastify/swagger';
-import { FastifySwaggerUiConfigOptions } from '@fastify/swagger-ui';
+import { FastifySwaggerUiOptions } from '@fastify/swagger-ui';
 import { FastifyInstance, FastifyServerOptions } from "fastify";
 import { FastifyStaticOptions } from '@fastify/static';
 import { FastifyMultipartAttachFieldsToBodyOptions } from '@fastify/multipart';
@@ -29,10 +29,10 @@ export interface AppOptions<T extends object = Record<string, any>> {
     fastifyOptions?: AppOptionHandler<FastifyServerOptions>;
     corsOptions?: FastifyCorsOptions | boolean | AppOptionHandler<FastifyCorsOptions>;
     helmetOptions?: FastifyHelmetOptions | boolean | AppOptionHandler<FastifyHelmetOptions>;
-    swaggerOptions?: AppOptionHandler<FastifyDynamicSwaggerOptions>;
-    swaggerUiOptions?: AppOptionHandler<FastifySwaggerUiConfigOptions>;
-    staticOptions?: AppOptionHandler<FastifyStaticOptions>;
-    multipartOptions?: AppOptionHandler<FastifyMultipartAttachFieldsToBodyOptions>;
+    swaggerOptions?: AppOptionHandler<FastifyDynamicSwaggerOptions> | FastifyDynamicSwaggerOptions;
+    swaggerUiOptions?: AppOptionHandler<FastifySwaggerUiOptions> | FastifySwaggerUiOptions;
+    staticOptions?: AppOptionHandler<FastifyStaticOptions> | FastifyStaticOptions | boolean;
+    multipartOptions?: AppOptionHandler<FastifyMultipartAttachFieldsToBodyOptions> | FastifyMultipartAttachFieldsToBodyOptions;
     plugins?: AppPlugin[];
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;

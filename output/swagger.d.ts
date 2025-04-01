@@ -1,5 +1,8 @@
+import { FastifyDynamicSwaggerOptions } from '@fastify/swagger';
 import { FastifySwaggerUiOptions } from '@fastify/swagger-ui';
-import { FastifyInstance } from 'fastify/fastify.js';
 import { AppMainOptions, AppOptions } from './types.js';
-export declare function setupSwagger(fastify: FastifyInstance, appOptions: AppOptions, options?: AppMainOptions): Promise<FastifySwaggerUiOptions>;
+export declare function setupSwagger(appOptions: AppOptions, options?: AppMainOptions): {
+    swaggerOptions: FastifyDynamicSwaggerOptions;
+    swaggerUiOptions: FastifySwaggerUiOptions;
+};
 //# sourceMappingURL=swagger.d.ts.map

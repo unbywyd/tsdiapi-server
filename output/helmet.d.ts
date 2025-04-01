@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify";
+import helmet from '@fastify/helmet';
 import { AppOptions } from "./types.js";
-export declare function setupHelmet(fastify: FastifyInstance, helmetOptions?: AppOptions['helmetOptions']): Promise<void>;
+export declare function setupHelmet(helmetOptions?: AppOptions['helmetOptions']): false | helmet.FastifyHelmetOptions;
 //# sourceMappingURL=helmet.d.ts.map

@@ -1,7 +1,7 @@
 import type { FastifyCorsOptions } from '@fastify/cors';
 import type { FastifyHelmetOptions } from '@fastify/helmet';
 import type { FastifyDynamicSwaggerOptions } from '@fastify/swagger';
-import { FastifySwaggerUiConfigOptions } from '@fastify/swagger-ui';
+import { FastifySwaggerUiConfigOptions, FastifySwaggerUiOptions } from '@fastify/swagger-ui';
 import { FastifyInstance, FastifyRequest, FastifyServerOptions } from "fastify";
 
 import { FastifyStaticOptions } from '@fastify/static';
@@ -33,10 +33,10 @@ export interface AppOptions<T extends object = Record<string, any>> {
     fastifyOptions?: AppOptionHandler<FastifyServerOptions>;
     corsOptions?: FastifyCorsOptions | boolean | AppOptionHandler<FastifyCorsOptions>;
     helmetOptions?: FastifyHelmetOptions | boolean | AppOptionHandler<FastifyHelmetOptions>;
-    swaggerOptions?: AppOptionHandler<FastifyDynamicSwaggerOptions>;
-    swaggerUiOptions?: AppOptionHandler<FastifySwaggerUiConfigOptions>;
-    staticOptions?: AppOptionHandler<FastifyStaticOptions>;
-    multipartOptions?: AppOptionHandler<FastifyMultipartAttachFieldsToBodyOptions>;
+    swaggerOptions?: AppOptionHandler<FastifyDynamicSwaggerOptions> | FastifyDynamicSwaggerOptions;
+    swaggerUiOptions?: AppOptionHandler<FastifySwaggerUiOptions> | FastifySwaggerUiOptions;
+    staticOptions?: AppOptionHandler<FastifyStaticOptions> | FastifyStaticOptions | boolean;
+    multipartOptions?: AppOptionHandler<FastifyMultipartAttachFieldsToBodyOptions> | FastifyMultipartAttachFieldsToBodyOptions;
     plugins?: AppPlugin[];
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;
@@ -51,7 +51,7 @@ export interface AppContext<T extends object = Record<string, any>> {
     options: AppOptions<T>;
     fileLoader?: FileLoader;
     projectConfig: AppConfig<T>;
-    projectPackage: Record<string, any>; 
+    projectPackage: Record<string, any>;
     plugins?: Record<string, AppPlugin>;
     useRoute: <Params extends TObject = TObject, Body extends TObject = TObject, Query extends TObject = TObject, Headers extends TObject = TObject, TResponses extends StatusSchemas = {}, TState = unknown>(controller?: string) => RouteBuilder<Params, Body, Query, Headers, TResponses, TState>;
 }

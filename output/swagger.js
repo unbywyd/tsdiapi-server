@@ -1,15 +1,10 @@
-/*
-*   Swagger Configuration
-*/
-import fastifySwagger from '@fastify/swagger';
-import fastifySwaggerUi from '@fastify/swagger-ui';
-export async function setupSwagger(fastify, appOptions, options) {
+export function setupSwagger(appOptions, options) {
     const appName = options?.APP_NAME;
     const host = options?.HOST;
     const port = options?.PORT;
     const version = options?.APP_VERSION;
     const swaggerOptionsHandler = 'function' === typeof appOptions?.swaggerOptions ? appOptions?.swaggerOptions : (defaultOptions) => defaultOptions;
-    await fastify.register(fastifySwagger, swaggerOptionsHandler({
+    const swaggerOptions = swaggerOptionsHandler({
         openapi: {
             info: {
                 title: appName,
@@ -42,9 +37,9 @@ export async function setupSwagger(fastify, appOptions, options) {
             },
             security: []
         },
-    }));
+    });
     const swaggerUiOptionsHandler = 'function' === typeof appOptions?.swaggerUiOptions ? appOptions?.swaggerUiOptions : (defaultOptions) => defaultOptions;
-    const extendOptions = swaggerUiOptionsHandler({
+    const swaggerUiOptions = swaggerUiOptionsHandler({
         routePrefix: '/docs',
         uiConfig: {
             docExpansion: 'none',
@@ -53,7 +48,9 @@ export async function setupSwagger(fastify, appOptions, options) {
         staticCSP: true,
         transformSpecificationClone: true
     });
-    await fastify.register(fastifySwaggerUi, extendOptions);
-    return extendOptions;
+    return {
+        swaggerOptions,
+        swaggerUiOptions,
+    };
 }
 //# sourceMappingURL=swagger.js.map
