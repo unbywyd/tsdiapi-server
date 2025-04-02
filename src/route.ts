@@ -4,7 +4,6 @@ import { AppContext, UploadFile } from './types.js';
 import { fileTypeFromBuffer } from 'file-type';
 import { MetaSchemaStorage, MetaRouteEntry, metaRouteSchemaStorage } from './meta.js';
 
-
 export type FileOptions = {
     maxFileSize?: number;
     accept?: string[];
