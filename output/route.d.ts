@@ -1,15 +1,12 @@
 import { FastifyError, FastifyInstance, FastifyReply, FastifyRequest, RouteOptions } from 'fastify';
-import { Static, TSchema, TString } from '@sinclair/typebox';
+import { Static, TDate, TSchema } from '@sinclair/typebox';
 import { AppContext, UploadFile } from './types.js';
 export type FileOptions = {
     maxFileSize?: number;
     accept?: string[];
     maxFiles?: number;
 };
-export declare function DateString(defaultValue?: string | Date): TDateStringSchema;
-type TDateStringSchema = TString & {
-    static: Date;
-};
+export declare function DateString(defaultValue?: string | Date): TDate;
 export type OnSendHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply, payload: unknown) => void | Promise<void>;
 export type PreValidationHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => void | Promise<void> | false;
 export type OnRequestHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => void | Promise<void>;
