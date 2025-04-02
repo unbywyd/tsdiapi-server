@@ -1,5 +1,5 @@
 {
-  "version": "0.2.9",
+  "version": "0.2.10",
   "name": "@tsdiapi/server",
   "description": "A fully ESM-based, modular TypeScript server built on Fastify",
   "main": "output/index.js",
@@ -25,6 +25,7 @@
     "@fastify/swagger": "^9.4.2",
     "@fastify/swagger-ui": "^5.2.2",
     "@fastify/type-provider-typebox": "^5.1.0",
+    "@tsdiapi/syncqueue": "^0.2.0",
     "@types/node": "^22.13.11",
     "fastify": "^5.2.1",
     "file-type": "^20.4.1",
@@ -35,9 +36,9 @@
     "name": "Unbywyd"
   },
   "peerDependencies": {
+    "@sinclair/typebox": "^0.34.30",
     "reflect-metadata": "^0.2.2",
-    "typedi": "^0.10.0",
-    "@sinclair/typebox": "^0.34.30"
+    "typedi": "^0.10.0"
   },
   "devDependencies": {
     "tslib": "^2.8.1",

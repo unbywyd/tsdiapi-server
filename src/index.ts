@@ -22,7 +22,7 @@ import helmet from '@fastify/helmet';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
-
+import { getSyncQueueProvider } from "@tsdiapi/syncqueue";
 export * from './types.js';
 export * from './route.js';
 
@@ -276,6 +276,7 @@ export async function createApp<T extends object = Record<string, any>>(options:
 
 
         try {
+            await getSyncQueueProvider().resolveAll();
             await Promise.all(pendingBuilds);
             await fastify.ready()
             fastify.swagger();
