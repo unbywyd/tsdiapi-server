@@ -36,6 +36,7 @@ export interface AppOptions<T extends object = Record<string, any>> {
     plugins?: AppPlugin[];
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;
+    preReady?(ctx: AppContext<T>): Promise<void> | void;
     afterStart?(ctx: AppContext<T>): Promise<void> | void;
 }
 export type Env = 'production' | 'development';
@@ -58,6 +59,7 @@ export interface AppPlugin<T extends object = Record<string, any>, P extends obj
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;
     afterStart?(ctx: AppContext<T>): Promise<void> | void;
+    preReady?(ctx: AppContext<T>): Promise<void> | void;
 }
 export type AppMainOptions = {
     PORT?: number;

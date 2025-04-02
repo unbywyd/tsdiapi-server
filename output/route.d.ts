@@ -85,7 +85,9 @@ export type RequestWithState<Params extends TSchema = TSchema, Body extends TSch
 };
 export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends TSchema = TSchema, Query extends TSchema = TSchema, Headers extends TSchema = TSchema, TResponses extends StatusSchemas = {}, TState = unknown> {
     private appContext;
+    private extraMetaStorage;
     private config;
+    withRef<T extends TSchema>(schema: T): TSchema;
     fastify: FastifyInstance;
     constructor(appContext: AppContext<Record<string, any>>);
     setRequestFormat(contentType: string): this;

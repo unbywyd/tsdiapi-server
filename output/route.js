@@ -1,5 +1,6 @@
 import { Type, } from '@sinclair/typebox';
 import { fileTypeFromBuffer } from 'file-type';
+import { MetaSchemaStorage, metaRouteSchemaStorage } from './meta.js';
 export function DateString(defaultValue) {
     return Type.String({
         format: 'date-time',
@@ -22,6 +23,7 @@ export function trimSlashes(input) {
 }
 export class RouteBuilder {
     appContext;
+    extraMetaStorage = new MetaSchemaStorage();
     config = {
         method: 'GET',
         url: '',
@@ -39,14 +41,20 @@ export class RouteBuilder {
         onError: null,
         responseHeaders: {},
     };
+    withRef(schema) {
+        if (schema && schema.$id) {
+            if (!this.fastify.getSchema(schema.$id)) {
+                this.fastify.addSchema(schema);
+            }
+            return Type.Ref(schema.$id);
+        }
+        return schema;
+    }
     fastify;
     constructor(appContext) {
         this.appContext = appContext;
         this.fastify = appContext.fastify;
     }
-    // ---------------------------
-    // 1) Определение Content-Type
-    // ---------------------------
     setRequestFormat(contentType) {
         if (contentType === 'multipart/form-data') {
             this.config.isMultipart = true;
@@ -187,25 +195,51 @@ export class RouteBuilder {
     // 3) Определение схемы
     // --------------------------
     params(schema) {
-        this.config.schema.params = schema;
+        this.extraMetaStorage.add({
+            type: 'params',
+            schema: schema,
+            id: schema.$id || undefined
+        });
+        this.config.schema.params = this.withRef(schema);
         return this;
     }
     body(schema) {
-        this.config.schema.body = schema;
+        this.extraMetaStorage.add({
+            type: 'body',
+            schema: schema,
+            id: schema.$id || undefined
+        });
+        this.config.schema.body = this.withRef(schema);
         return this;
     }
     query(schema) {
-        this.config.schema.querystring = schema;
+        this.extraMetaStorage.add({
+            type: 'query',
+            schema: schema,
+            id: schema.$id || undefined
+        });
+        this.config.schema.querystring = this.withRef(schema);
         return this;
     }
     headers(schema) {
-        this.config.schema.headers = schema;
+        this.extraMetaStorage.add({
+            type: 'headers',
+            schema: schema,
+            id: schema.$id || undefined
+        });
+        this.config.schema.headers = this.withRef(schema);
         return this;
     }
     code(code, schema) {
+        this.extraMetaStorage.add({
+            type: 'response',
+            statusCode: code,
+            schema: schema,
+            id: schema.$id || undefined
+        });
         this.config.schema.response[code] = Type.Object({
             status: Type.Literal(code),
-            data: schema
+            data: this.withRef(schema)
         });
         return this;
     }
@@ -359,9 +393,23 @@ export class RouteBuilder {
             tags: tags || [],
             summary: summary || '',
             description: description || '',
-            security: security || [],
-            ...schema,
+            security: security || []
         };
+        if (schema.body) {
+            extendedSchema.body = schema.body;
+        }
+        if (schema.querystring) {
+            extendedSchema.querystring = schema.querystring;
+        }
+        if (schema.headers) {
+            extendedSchema.headers = schema.headers;
+        }
+        if (schema.params) {
+            extendedSchema.params = schema.params;
+        }
+        if (schema.response) {
+            extendedSchema.response = schema.response;
+        }
         const onErrorHandler = (error, req, reply) => {
             if (error) {
                 if (errorHandler) {
@@ -381,9 +429,17 @@ export class RouteBuilder {
         const _prefix = cleanedPrefix ? `${cleanedPrefix}/` : '';
         const _controller = cleanedController ? `${cleanedController}/` : '';
         const _version = version ? `v${version}/` : '';
+        const route = `/${_prefix}${_controller}${_version}${cleanedUrl}`;
+        const schemas = this.extraMetaStorage.getAll();
+        const metaEntry = {
+            route,
+            method,
+            meta: schemas
+        };
+        metaRouteSchemaStorage.add(metaEntry);
         let newRouteOptions = {
             method,
-            url: `/${_prefix}${_controller}${_version}${cleanedUrl}`,
+            url: route,
             schema: extendedSchema,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);
