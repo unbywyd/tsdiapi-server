@@ -2,6 +2,8 @@ import { FastifyError, FastifyInstance, FastifyReply, FastifyRequest, RouteOptio
 import { Static, TDate, TSchema, Type, } from '@sinclair/typebox';
 import { AppContext, UploadFile } from './types.js';
 import { fileTypeFromBuffer } from 'file-type';
+import { MetaSchemaStorage, MetaRouteEntry, metaRouteSchemaStorage } from './meta.js';
+
 
 export type FileOptions = {
     maxFileSize?: number;
@@ -153,6 +155,7 @@ export class RouteBuilder<
     TResponses extends StatusSchemas = {},
     TState = unknown
 > {
+    private extraMetaStorage: MetaSchemaStorage = new MetaSchemaStorage();
     private config: RouteConfig<TState> = {
         method: 'GET',
         url: '',
@@ -171,14 +174,20 @@ export class RouteBuilder<
         responseHeaders: {},
     };
 
+    withRef<T extends TSchema>(schema: T): TSchema {
+        if (schema && schema.$id) {
+            if (!this.fastify.getSchema(schema.$id)) {
+                this.fastify.addSchema(schema);
+            }
+            return Type.Ref(schema.$id);
+        }
+        return schema;
+    }
+
     fastify: FastifyInstance;
     constructor(private appContext: AppContext<Record<string, any>>) {
         this.fastify = appContext.fastify;
     }
-
-    // ---------------------------
-    // 1) Определение Content-Type
-    // ---------------------------
 
     public setRequestFormat(contentType: string): this {
         if (contentType === 'multipart/form-data') {
@@ -353,28 +362,48 @@ export class RouteBuilder<
     public params<T extends TSchema>(
         schema: T
     ): RouteBuilder<T, Body, Query, Headers, TResponses, TState> {
-        this.config.schema.params = schema;
+        this.extraMetaStorage.add({
+            type: 'params',
+            schema: schema,
+            id: schema.$id || undefined
+        });
+        this.config.schema.params = this.withRef(schema);
         return this as unknown as RouteBuilder<T, Body, Query, Headers, TResponses, TState>;
     }
 
     public body<T extends TSchema>(
         schema: T
     ): RouteBuilder<Params, T, Query, Headers, TResponses, TState> {
-        this.config.schema.body = schema;
+        this.extraMetaStorage.add({
+            type: 'body',
+            schema: schema,
+            id: schema.$id || undefined
+        });
+        this.config.schema.body = this.withRef(schema);
         return this as unknown as RouteBuilder<Params, T, Query, Headers, TResponses, TState>;
     }
 
     public query<T extends TSchema>(
         schema: T
     ): RouteBuilder<Params, Body, T, Headers, TResponses, TState> {
-        this.config.schema.querystring = schema;
+        this.extraMetaStorage.add({
+            type: 'query',
+            schema: schema,
+            id: schema.$id || undefined
+        });
+        this.config.schema.querystring = this.withRef(schema);
         return this as unknown as RouteBuilder<Params, Body, T, Headers, TResponses, TState>;
     }
 
     public headers<T extends TSchema>(
         schema: T
     ): RouteBuilder<Params, Body, Query, T, TResponses, TState> {
-        this.config.schema.headers = schema;
+        this.extraMetaStorage.add({
+            type: 'headers',
+            schema: schema,
+            id: schema.$id || undefined
+        });
+        this.config.schema.headers = this.withRef(schema);
         return this as unknown as RouteBuilder<Params, Body, Query, T, TResponses, TState>;
     }
 
@@ -385,9 +414,15 @@ export class RouteBuilder<
         code: Code,
         schema: T
     ): RouteBuilder<Params, Body, Query, Headers, MergeStatus<TResponses, Code, T>, TState> {
+        this.extraMetaStorage.add({
+            type: 'response',
+            statusCode: code,
+            schema: schema,
+            id: schema.$id || undefined
+        });
         this.config.schema.response[code] = Type.Object({
             status: Type.Literal(code),
-            data: schema
+            data: this.withRef(schema)
         });
         return this as unknown as RouteBuilder<
             Params,
@@ -627,13 +662,28 @@ export class RouteBuilder<
         if (isMultipart && fileOptions) {
             allPreHandlers.push(tempFilesPrehandler);
         }
-        const extendedSchema = {
+        const extendedSchema: Record<string, any> = {
             tags: tags || [],
             summary: summary || '',
             description: description || '',
-            security: security || [],
-            ...schema,
+            security: security || []
         }
+        if (schema.body) {
+            extendedSchema.body = schema.body;
+        }
+        if (schema.querystring) {
+            extendedSchema.querystring = schema.querystring;
+        }
+        if (schema.headers) {
+            extendedSchema.headers = schema.headers;
+        }
+        if (schema.params) {
+            extendedSchema.params = schema.params;
+        }
+        if (schema.response) {
+            extendedSchema.response = schema.response;
+        }
+
 
         const onErrorHandler = (error: FastifyError, req: FastifyRequest, reply: FastifyReply) => {
             if (error) {
@@ -656,10 +706,19 @@ export class RouteBuilder<
         const _prefix = cleanedPrefix ? `${cleanedPrefix}/` : '';
         const _controller = cleanedController ? `${cleanedController}/` : '';
         const _version = version ? `v${version}/` : '';
+        const route = `/${_prefix}${_controller}${_version}${cleanedUrl}`;
+
+        const schemas = this.extraMetaStorage.getAll();
+        const metaEntry: MetaRouteEntry = {
+            route,
+            method,
+            meta: schemas
+        }
+        metaRouteSchemaStorage.add(metaEntry);
 
         let newRouteOptions: RouteOptions = {
             method,
-            url: `/${_prefix}${_controller}${_version}${cleanedUrl}`,
+            url: route,
             schema: extendedSchema,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);
@@ -793,6 +852,7 @@ export class RouteBuilder<
         if (modify) {
             newRouteOptions = await modify(newRouteOptions);
         }
+
 
         this.fastify.route(newRouteOptions);
     }

@@ -25,6 +25,7 @@ import fastifyStatic from '@fastify/static';
 import { getSyncQueueProvider } from "@tsdiapi/syncqueue";
 export * from './types.js';
 export * from './route.js';
+export * from './meta.js';
 
 let context: AppContext | null = null;
 export function getContext(): AppContext | null {
@@ -273,11 +274,33 @@ export async function createApp<T extends object = Record<string, any>>(options:
                 }
             }
         }
-
+        if (options?.beforeStart) {
+            try {
+                await options.beforeStart(context);
+            } catch (error) {
+                console.error(`⚠️ Error in beforeStart:\n`, error.stack || error);
+            }
+        }
 
         try {
             await getSyncQueueProvider().resolveAll();
             await Promise.all(pendingBuilds);
+
+            try {
+                if (options?.preReady) {
+                    await options.preReady(context);
+                }
+                if (options?.plugins && options.plugins.length > 0) {
+                    for (const plugin of options.plugins) {
+                        if (plugin.preReady) {
+                            await plugin.preReady(context);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`Error in preReady:`, error);
+            }
+
             await fastify.ready()
             fastify.swagger();
             const port = appOptions.PORT;

@@ -82,6 +82,7 @@ export async function createApp(options = {}) {
             }
             const originalBuild = builder.build;
             builder.build = async function () {
+                console.log('Push to Build');
                 const buildPromise = originalBuild.call(builder);
                 pendingBuilds.push(buildPromise);
                 await buildPromise;
@@ -243,6 +244,7 @@ export async function createApp(options = {}) {
         }
         try {
             await getSyncQueueProvider().resolveAll();
+            console.log('pendingBuilds', pendingBuilds);
             await Promise.all(pendingBuilds);
             await fastify.ready();
             fastify.swagger();
