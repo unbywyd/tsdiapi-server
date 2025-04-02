@@ -21,6 +21,13 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
 export * from './types.js';
 export * from './route.js';
+let context = null;
+export function getContext() {
+    return context;
+}
+function setContext(newContext) {
+    context = newContext;
+}
 export async function createApp(options = {}) {
     const fastifyOptions = 'function' === typeof options.fastifyOptions ? options.fastifyOptions : (defaultOptions) => defaultOptions;
     const fastify = Fastify(fastifyOptions({
@@ -62,6 +69,7 @@ export async function createApp(options = {}) {
         });
         options.helmetOptions = setupHelmet(options.helmetOptions);
         const context = await initApp(cwd, options, fastify);
+        setContext(context);
         if (options.fileLoader) {
             context.fileLoader = options.fileLoader;
         }

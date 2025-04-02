@@ -26,6 +26,13 @@ import fastifyStatic from '@fastify/static';
 export * from './types.js';
 export * from './route.js';
 
+let context: AppContext | null = null;
+export function getContext(): AppContext | null {
+    return context;
+}
+function setContext(newContext: AppContext): void {
+    context = newContext;
+}
 export async function createApp<T extends object = Record<string, any>>(options: AppOptions<T> = {}): Promise<AppContext<T> | null> {
     const fastifyOptions = 'function' === typeof options.fastifyOptions ? options.fastifyOptions : (defaultOptions: FastifyServerOptions) => defaultOptions;
     const fastify = Fastify(fastifyOptions({
@@ -71,6 +78,7 @@ export async function createApp<T extends object = Record<string, any>>(options:
 
 
         const context = await initApp<T>(cwd, options, fastify) as AppContext<T>;
+        setContext(context);
         if (options.fileLoader) {
             context.fileLoader = options.fileLoader;
         }
