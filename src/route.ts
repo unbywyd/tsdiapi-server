@@ -100,7 +100,10 @@ export interface RouteConfig<TState = unknown> {
     onSend: OnSendHook | null;
     onResponse: OnResponseHook | null;
     onError: OnErrorHook | null;
-    resolver?: (req: FastifyRequest) => Promise<TState> | TState;
+    resolver?: (
+        req: FastifyRequest,
+        reply: FastifyReply
+    ) => Promise<TState | ResponseUnion<StatusSchemas>> | (TState | ResponseUnion<StatusSchemas>);
     responseHeaders: Record<string, string>;
     isMultipart?: boolean;
     responseType?: string;
@@ -511,7 +514,10 @@ export class RouteBuilder<
     // 6) Передача данных между хуками (resolver)
     // -------------------------------------------
     public resolve<TNewState extends TState>(
-        fn: (req: FastifyRequest) => Promise<TNewState> | TNewState
+        fn: (
+            req: RequestWithState<Params, Body, Query, Headers, TState>,
+            reply: FastifyReply
+        ) => TNewState | ResponseUnion<TResponses> | Promise<TNewState | ResponseUnion<TResponses>>
     ): RouteBuilder<Params, Body, Query, Headers, TResponses, TNewState> {
         this.config.resolver = fn;
         return this as unknown as RouteBuilder<
@@ -633,10 +639,16 @@ export class RouteBuilder<
             throw new Error('Method and URL are required');
         }
 
-        const resolvePreHandler = async (req: FastifyRequest) => {
+        const resolvePreHandler = async (req: FastifyRequest, reply: FastifyReply) => {
             if (resolver) {
-                req.routeData = (await resolver(req)) as TState;
+                const result = await resolver(req, reply);
+                if (typeof result === "object" && "status" in result && "data" in result) {
+                    reply.code(result.status).send(result);
+                    return false;
+                }
+                req.routeData = result as TState;
             }
+            return true;
         };
         const preHandlersWithResolver = [resolvePreHandler, ...guards];
         const tempFilesPrehandler = async (req: FastifyRequest) => {

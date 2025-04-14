@@ -361,10 +361,16 @@ export class RouteBuilder {
         if (!method || !url) {
             throw new Error('Method and URL are required');
         }
-        const resolvePreHandler = async (req) => {
+        const resolvePreHandler = async (req, reply) => {
             if (resolver) {
-                req.routeData = (await resolver(req));
+                const result = await resolver(req, reply);
+                if (typeof result === "object" && "status" in result && "data" in result) {
+                    reply.code(result.status).send(result);
+                    return false;
+                }
+                req.routeData = result;
             }
+            return true;
         };
         const preHandlersWithResolver = [resolvePreHandler, ...guards];
         const tempFilesPrehandler = async (req) => {

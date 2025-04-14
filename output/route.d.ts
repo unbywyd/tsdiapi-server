@@ -51,7 +51,7 @@ export interface RouteConfig<TState = unknown> {
     onSend: OnSendHook | null;
     onResponse: OnResponseHook | null;
     onError: OnErrorHook | null;
-    resolver?: (req: FastifyRequest) => Promise<TState> | TState;
+    resolver?: (req: FastifyRequest, reply: FastifyReply) => Promise<TState | ResponseUnion<StatusSchemas>> | (TState | ResponseUnion<StatusSchemas>);
     responseHeaders: Record<string, string>;
     isMultipart?: boolean;
     responseType?: string;
@@ -129,7 +129,7 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     onResponse(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
     onError(fn: (this: RouteBuilder, error: FastifyError, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
     setErrorHandler(fn: (this: RouteBuilder, error: FastifyError, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
-    resolve<TNewState extends TState>(fn: (req: FastifyRequest) => Promise<TNewState> | TNewState): RouteBuilder<Params, Body, Query, Headers, TResponses, TNewState>;
+    resolve<TNewState extends TState>(fn: (req: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => TNewState | ResponseUnion<TResponses> | Promise<TNewState | ResponseUnion<TResponses>>): RouteBuilder<Params, Body, Query, Headers, TResponses, TNewState>;
     handler(fn: (req: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => Promise<ResponseUnion<TResponses> | string> | (ResponseUnion<TResponses> | string)): this;
     responseHeader<Code extends keyof TResponses>(name: string, value: string, statusCode: Code): this;
     cacheControl(value: string): this;
