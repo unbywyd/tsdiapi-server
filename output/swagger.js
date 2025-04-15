@@ -3,6 +3,10 @@ export function setupSwagger(appOptions, options) {
     const host = options?.HOST;
     const port = options?.PORT;
     const version = options?.APP_VERSION;
+    const isProduction = process.env.NODE_ENV === 'production';
+    const baseUrl = isProduction
+        ? `https://${host}${port ? `:${port}` : ''}`
+        : `http://${host}:${port}`;
     const swaggerOptionsHandler = 'function' === typeof appOptions?.swaggerOptions ? appOptions?.swaggerOptions : (defaultOptions) => defaultOptions;
     const swaggerOptions = swaggerOptionsHandler({
         openapi: {
@@ -13,8 +17,8 @@ export function setupSwagger(appOptions, options) {
             },
             servers: [
                 {
-                    url: `http://${host}:${port}`,
-                    description: 'Development server',
+                    url: baseUrl,
+                    description: isProduction ? 'Production server' : 'Development server',
                 },
             ],
             components: {
@@ -43,10 +47,22 @@ export function setupSwagger(appOptions, options) {
         routePrefix: '/docs',
         uiConfig: {
             docExpansion: 'none',
-            deepLinking: false
+            deepLinking: false,
+            persistAuthorization: true,
+            displayRequestDuration: true,
+            filter: true,
         },
         staticCSP: true,
-        transformSpecificationClone: true
+        transformSpecificationClone: true,
+        uiHooks: {
+            onRequest: (request, reply, next) => {
+                // Add CORS headers
+                reply.header('Access-Control-Allow-Origin', '*');
+                reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+                reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+                next();
+            }
+        }
     });
     return {
         swaggerOptions,
