@@ -14,9 +14,9 @@ export function setupSwagger(appOptions: AppOptions, options?: AppMainOptions): 
     const port = options?.PORT;
     const version = options?.APP_VERSION;
     const isProduction = process.env.NODE_ENV === 'production';
-    
-    const baseUrl = isProduction 
-        ? `https://${host}${port ? `:${port}` : ''}`
+
+    const baseUrl = isProduction
+        ? `https://${host}`
         : `http://${host}:${port}`;
 
     const swaggerOptionsHandler = 'function' === typeof appOptions?.swaggerOptions ? appOptions?.swaggerOptions : (defaultOptions: FastifyDynamicSwaggerOptions) => defaultOptions;

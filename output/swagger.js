@@ -5,7 +5,7 @@ export function setupSwagger(appOptions, options) {
     const version = options?.APP_VERSION;
     const isProduction = process.env.NODE_ENV === 'production';
     const baseUrl = isProduction
-        ? `https://${host}${port ? `:${port}` : ''}`
+        ? `https://${host}`
         : `http://${host}:${port}`;
     const swaggerOptionsHandler = 'function' === typeof appOptions?.swaggerOptions ? appOptions?.swaggerOptions : (defaultOptions) => defaultOptions;
     const swaggerOptions = swaggerOptionsHandler({
