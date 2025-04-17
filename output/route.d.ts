@@ -39,6 +39,7 @@ export interface RouteConfig<TState = unknown> {
         querystring?: TSchema;
         headers?: TSchema;
         response?: Record<number, TSchema>;
+        consumes?: string[];
     };
     errorHandler?: ErrorHandlerHook;
     fileOptions?: Record<string, FileOptions>;

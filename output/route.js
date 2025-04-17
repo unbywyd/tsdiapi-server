@@ -416,6 +416,9 @@ export class RouteBuilder {
         if (schema.response) {
             extendedSchema.response = schema.response;
         }
+        if (schema.consumes) {
+            extendedSchema.consumes = schema.consumes;
+        }
         const onErrorHandler = (error, req, reply) => {
             if (error) {
                 if (errorHandler) {

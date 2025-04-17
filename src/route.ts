@@ -88,6 +88,7 @@ export interface RouteConfig<TState = unknown> {
         querystring?: TSchema;
         headers?: TSchema;
         response?: Record<number, TSchema>;
+        consumes?: string[];
     };
     errorHandler?: ErrorHandlerHook;
     fileOptions?: Record<string, FileOptions>;
@@ -195,7 +196,7 @@ export class RouteBuilder<
         if (contentType === 'multipart/form-data') {
             this.config.isMultipart = true;
         }
-        (this.config.schema as any).consumes = [contentType];
+        this.config.schema.consumes = [contentType];
         return this;
     }
 
@@ -243,7 +244,7 @@ export class RouteBuilder<
     }
 
     public consumes(consumes: string[]): this {
-        (this.config.schema as any).consumes = consumes;
+        this.config.schema.consumes = consumes;
         return this;
     }
 
@@ -694,7 +695,9 @@ export class RouteBuilder<
         if (schema.response) {
             extendedSchema.response = schema.response;
         }
-
+        if (schema.consumes) {
+            extendedSchema.consumes = schema.consumes;
+        }
 
         const onErrorHandler = (error: FastifyError, req: FastifyRequest, reply: FastifyReply) => {
             if (error) {
