@@ -20,6 +20,8 @@ export type UploadFile = {
     url?: string;
     meta?: Record<string, any>;
     id: string;
+    s3bucket?: string;
+    s3region?: string;
 }
 
 export type FileLoader = (file: UploadFile, routeBuilder: RouteBuilder) => Promise<UploadFile> | UploadFile;
