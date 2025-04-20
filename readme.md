@@ -38,9 +38,23 @@ Your API is now running! 🎉 Open the browser and check **Swagger UI** at:
 ✅ **CORS & Security** – Preconfigured CORS & Helmet support  
 ✅ **File Upload Support** – Handles multipart/form-data  
 ✅ **Plugin System** – Easily extend with plugins
+✅ **Prisma Integration** – Seamless database integration with TypeBox schemas
 
 ---
 
+## 📦 Database Integration
+
+TSDIAPI provides seamless integration with **Prisma ORM**:
+
+- **Type-Safe Database Access** – Full TypeScript support with Prisma Client
+- **Auto-Generated TypeBox Schemas** – Convert Prisma models to TypeBox schemas
+- **Safe Schema Management** – Use PrismaQL for schema modifications
+- **Automatic Migrations** – Easy database versioning
+
+To get started with Prisma, see:  
+👉 [Prisma Integration Guide](./readme.prisma.md)
+
+---
 
 ## 🎯 Defining API Routes
 
@@ -196,13 +210,10 @@ await createApp({
 
 ---
 
-## 📖 Documentation & Swagger
+## 📖 Documentation
 
-Auto-generated API docs available at:  
-👉 `http://localhost:3000/docs`
-
-For detailed routing documentation, see:  
-👉 [Routing Documentation](./readme.routing.md)
+- [Routing Documentation](./readme.routing.md)
+- [Prisma Integration](./readme.prisma.md)
 
 ---
 
