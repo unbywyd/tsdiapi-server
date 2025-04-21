@@ -3,6 +3,9 @@
 A modern, **ESM-based**, modular TypeScript server built on **Fastify** and **TypeBox**.  
 Designed for **performance**, **flexibility**, and **extensibility**, it provides a solid foundation for API development with minimal complexity.
 
+📚 **Documentation**: For detailed documentation, visit [https://tsdiapi.com/](https://tsdiapi.com/)
+
+
 ## 🚀 Quick Start
 
 1. **Create a new project using CLI**:

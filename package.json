@@ -1,5 +1,5 @@
 {
-  "version": "0.2.22",
+  "version": "0.2.24",
   "name": "@tsdiapi/server",
   "description": "A fully ESM-based, modular TypeScript server built on Fastify",
   "main": "output/index.js",
@@ -57,5 +57,5 @@
   "bugs": {
     "url": "https://github.com/unbywyd/tsdiapi-server/issues"
   },
-  "homepage": "https://github.com/unbywyd/tsdiapi-server#readme"
+  "homepage": "https://tsdiapi.com"
 }

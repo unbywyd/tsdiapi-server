@@ -219,8 +219,10 @@ The configuration is automatically loaded and validated when the application sta
 createApp<ConfigType>({
     onInit: async (ctx) => {
         // Access configuration
-        const { PORT, HOST, DATABASE_URL } = ctx.projectConfig;
-        console.log(`Server will run on ${HOST}:${PORT}`);
+        const port = ctx.projectConfig.get('PORT', 3000);
+        const host = ctx.projectConfig.get('HOST', 'localhost');
+        const databaseUrl = ctx.projectConfig.get('DATABASE_URL');
+        console.log(`Server will run on ${host}:${port}`);
     }
 });
 ```

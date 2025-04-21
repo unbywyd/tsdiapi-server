@@ -25,26 +25,20 @@ prisma migrate dev
 
 ## 📦 TypeBox Schema Generation
 
-Prisma models are automatically converted to TypeBox schemas using `prisma-fastify-typebox-generator`. This allows you to use these schemas in your routing definitions.
+Prisma models are automatically converted to TypeBox schemas. These schemas are generated in the `@base/api/typebox-schemas/models/` directory and can be used in your routing definitions.
 
 ### Example Usage in Routing
 ```typescript
-import { Type } from "@sinclair/typebox";
-import { UserSchema } from "@generated/prisma/typebox"; // Auto-generated TypeBox schemas
+import { OutputTsdiapiSchema } from "@base/api/typebox-schemas/models/OutputTsdiapiSchema.model.js";
 
-export default function userController({ useRoute }: AppContext) {
-  useRoute()
-    .post("/users")
-    .body(UserSchema) // Use the generated schema
-    .code(201, UserSchema)
-    .handler(async (req) => {
-      const prisma = usePrisma();
-      const user = await prisma.user.create({
-        data: req.body
-      });
-      return { status: 201, data: user };
-    })
-    .build();
+export default function FeatureModule({ useRoute }: AppContext): void {
+    useRoute("feature")
+        .get("/text")
+        .code(200, OutputTsdiapiSchema)
+        .handler(async () => {
+            // Your handler logic here
+        })
+        .build();
 }
 ```
 
@@ -68,44 +62,60 @@ prismaql "GET MODELS"
 
 ### Basic Setup
 ```typescript
-import { PrismaClient } from "@generated/prisma/client.js";
 import { createApp } from "@tsdiapi/server";
 import PrismaPlugin from "@tsdiapi/prisma";
 
 createApp({
-  plugins: [PrismaPlugin({ client: PrismaClient })]
+  plugins: [PrismaPlugin()]
 });
+```
+
+## ⚙️ Service Usage Example
+
+```typescript
+import { Service } from "typedi";
+import { usePrisma } from "@tsdiapi/prisma";
+import { PrismaClient } from "@generated/prisma/client.js";
+
+@Service()
+export default class FeatureService {
+    async getHello(): Promise<string> {
+        const prisma = usePrisma<PrismaClient>();
+        const count = await prisma.tsdiapi.count();
+        return "Hello World";
+    }
+}
 ```
 
 ## ⚠️ Important Notes
 
 1. **Prisma Client Access**:
-   - Use `usePrisma()` only within route handlers
+   - Use `usePrisma()` only within route handlers or services
    - Available after server initialization
    - For global access, use `fastify.prisma` (requires type assertion)
 
 2. **Type Safety**:
    ```typescript
-   // In route handlers
+   // In route handlers or services
    const prisma = usePrisma<PrismaClient>();
    
    // Global access
    const prisma = fastify.prisma as PrismaClient;
    ```
 
-3. **Prisma Client Location**:
-   - Starting from Prisma 6.6, client is generated in project root
-   - Import path: `@generated/prisma/client.js`
+3. **TypeBox Schemas Location**:
+   - Schemas are generated in `@base/api/typebox-schemas/models/`
+   - Import path format: `@base/api/typebox-schemas/models/YourSchema.model.js`
 
 ## 🔄 Workflow
 
 1. Add/update Prisma schema using PrismaQL
 2. Run migrations: `prisma migrate dev`
-3. Use generated TypeBox schemas in routes
-4. Access Prisma client in route handlers
+3. Use generated TypeBox schemas from `@base/api/typebox-schemas/models/` in routes
+4. Access Prisma client in route handlers or services using `usePrisma<PrismaClient>()`
 
 ## 📚 Additional Resources
 
-- [Prisma Fastify TypeBox Generator](https://www.npmjs.com/package/prisma-fastify-typebox-generator)
-- [PrismaQL Documentation](https://www.npmjs.com/package/prismaql)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [TypeBox Documentation](https://github.com/sinclairzx81/typebox)
 - [Prisma Schema Generator UI](https://prisma-dto-generator.netlify.app/) 
