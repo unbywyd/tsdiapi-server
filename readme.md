@@ -213,8 +213,9 @@ await createApp({
 
 ---
 
-## 📖 Documentation
+## �� Documentation
 
+- [Configuration Guide](./readme.createapp.md)
 - [Routing Documentation](./readme.routing.md)
 - [Prisma Integration](./readme.prisma.md)
 
