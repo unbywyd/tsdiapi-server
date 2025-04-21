@@ -1,6 +1,7 @@
 # TSDI API Routing Documentation
 
 ## Table of Contents
+- [Automatic Route Loading](#automatic-route-loading)
 - [Basic Usage](#basic-usage)
 - [Route Configuration](#route-configuration)
 - [HTTP Methods](#http-methods)
@@ -14,6 +15,135 @@
 - [Authentication](#authentication)
 - [Resolvers](#resolvers)
 - [Examples](#examples)
+
+## Automatic Route Loading
+
+The TSDI API server automatically loads routes from specific files in your project. This happens during server initialization, before the server starts accepting requests.
+
+### File Naming Convention
+
+The server looks for two types of files:
+1. `*.module.ts` - Module files containing route definitions
+2. `*.load.ts` - Loader files for additional route setup
+
+### Module Structure
+
+Each module file should export a default function that takes an `AppContext` as its parameter. This function will be executed during server initialization.
+
+```typescript
+// feature.module.ts
+export default function FeatureModule({ useRoute }: AppContext): void {
+    useRoute("feature")
+        .get("/text")
+        .text()
+        .handler(async (req, res) => {
+            return "Hello, world!";
+        })
+        .build();
+}
+```
+
+### Loader Files
+
+Loader files (`*.load.ts`) follow the same pattern but are typically used for:
+- Setting up route middleware
+- Configuring global route options
+- Registering route hooks
+- Setting up authentication strategies
+
+```typescript
+// auth.load.ts
+export default function AuthLoader({ useRoute }: AppContext): void {
+    // Setup authentication middleware
+    useRoute("auth")
+        .guard(async (req, res) => {
+            // Global authentication logic
+        });
+}
+```
+
+### Loading Process
+
+1. During server initialization, the system:
+   - Scans the project for `*.module.ts` and `*.load.ts` files
+   - Loads each file in alphabetical order
+   - Executes the default exported function with `AppContext`
+   - Registers all routes defined in the modules
+
+2. The loading process happens:
+   - After server configuration
+   - Before the server starts accepting requests
+   - In a synchronous manner to ensure proper route registration
+
+3. Error handling:
+   - If a module fails to load, the server will not start
+   - Detailed error messages are provided for debugging
+   - Route validation occurs during the loading process
+
+### Best Practices
+
+1. **File Organization**:
+   ```typescript
+   // users/users.module.ts
+   export default function UsersModule({ useRoute }: AppContext): void {
+       // User-related routes
+   }
+
+   // auth/auth.module.ts
+   export default function AuthModule({ useRoute }: AppContext): void {
+       // Authentication routes
+   }
+   ```
+
+2. **Module Structure**:
+   ```typescript
+   // feature.module.ts
+   export default function FeatureModule({ useRoute }: AppContext): void {
+       // Group related routes
+       useRoute("feature")
+           .get("/")
+           .handler(async (req, res) => {
+               // Handler implementation
+           })
+           .build();
+
+       // Another route group
+       useRoute("feature/admin")
+           .get("/")
+           .handler(async (req, res) => {
+               // Admin handler
+           })
+           .build();
+   }
+   ```
+
+3. **Loader Usage**:
+   ```typescript
+   // middleware.load.ts
+   export default function MiddlewareLoader({ useRoute }: AppContext): void {
+       // Setup global middleware
+       useRoute("*")  // Applies to all routes
+           .preValidation(async (req, res) => {
+               // Global validation
+           });
+   }
+   ```
+
+### Example Project Structure
+
+```
+src/
+├── api/
+│   ├── users/
+│   │   ├── users.module.ts
+│   │   └── users.service.ts
+│   ├── auth/
+│   │   ├── auth.module.ts
+│   │   └── auth.service.ts
+│   └── middleware/
+│       └── middleware.load.ts
+└── main.ts
+```
 
 ## Basic Usage
 
