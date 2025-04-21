@@ -130,6 +130,15 @@ export default function userController({ useRoute }: AppContext) {
 export default function adminController({ useRoute }: AppContext) {
   useRoute()
     .get("/admin/dashboard")
+    .code(401, Type.Object({
+      error: Type.String()
+    }))
+    .code(200, Type.Object({
+      stats: Type.Object({
+        users: Type.Number(),
+        revenue: Type.Number()
+      })
+    }))
     .auth("bearer", async (req) => {
       const isValid = await validateToken(req.headers.authorization);
       if (!isValid) {
@@ -137,12 +146,6 @@ export default function adminController({ useRoute }: AppContext) {
       }
       return true;
     })
-    .code(200, Type.Object({
-      stats: Type.Object({
-        users: Type.Number(),
-        revenue: Type.Number()
-      })
-    }))
     .handler(async (req) => {
       const stats = await getDashboardStats();
       return { status: 200, data: { stats } };
@@ -156,6 +159,9 @@ export default function adminController({ useRoute }: AppContext) {
 export default function uploadController({ useRoute }: AppContext) {
   useRoute()
     .post("/upload")
+    .code(200, Type.Object({
+      url: Type.String()
+    }))
     .acceptMultipart()
     .body(Type.Object({
       file: Type.String({ format: "binary" }),
@@ -167,9 +173,6 @@ export default function uploadController({ useRoute }: AppContext) {
       maxFileSize: 1024 * 1024 * 5, // 5MB
       accept: ["image/jpeg", "image/png"]
     }, "file")
-    .code(200, Type.Object({
-      url: Type.String()
-    }))
     .handler(async (req) => {
       const url = await uploadFile(req.body.file);
       return { status: 200, data: { url } };
