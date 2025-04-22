@@ -223,6 +223,7 @@ export async function createApp(options = {}) {
                 }
             }
         });
+        loadExtensions.push('extra');
         loadExtensions.push('module');
         loadExtensions.push('load');
         for (const ext of loadExtensions) {

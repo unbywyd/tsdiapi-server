@@ -254,6 +254,7 @@ export async function createApp<T extends object = Record<string, any>>(options:
             }
         });
 
+        loadExtensions.push('extra');
         loadExtensions.push('module');
         loadExtensions.push('load');
 
