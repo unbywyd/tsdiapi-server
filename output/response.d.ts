@@ -96,6 +96,21 @@ export declare const buildResponseCodes: <S extends TSchema, E extends TSchema =
         details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
     }> | E;
 };
+export declare const buildExtraResponseCodes: <S extends TSchema, E extends TSchema>(successSchema: S, errorSchema?: E) => {
+    200: S;
+    400: import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    401: import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    403: import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+};
 export declare const useResponseSchemas: <S extends TSchema, E extends TSchema>(successSchema: S, errorSchema?: E) => {
     codes: {
         200: S;
@@ -108,30 +123,6 @@ export declare const useResponseSchemas: <S extends TSchema, E extends TSchema>(
             details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
         }>;
         403: import("@sinclair/typebox").TObject<{
-            error: import("@sinclair/typebox").TString;
-            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
-        }>;
-        404: import("@sinclair/typebox").TObject<{
-            error: import("@sinclair/typebox").TString;
-            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
-        }>;
-        409: import("@sinclair/typebox").TObject<{
-            error: import("@sinclair/typebox").TString;
-            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
-        }>;
-        422: import("@sinclair/typebox").TObject<{
-            error: import("@sinclair/typebox").TString;
-            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
-        }>;
-        429: import("@sinclair/typebox").TObject<{
-            error: import("@sinclair/typebox").TString;
-            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
-        }>;
-        500: import("@sinclair/typebox").TObject<{
-            error: import("@sinclair/typebox").TString;
-            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
-        }>;
-        503: import("@sinclair/typebox").TObject<{
             error: import("@sinclair/typebox").TString;
             details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
         }>;

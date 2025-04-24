@@ -111,6 +111,15 @@ export const buildResponseCodes = (successSchema, errorSchema) => {
         503: defaultErrorSchema
     };
 };
+export const buildExtraResponseCodes = (successSchema, errorSchema) => {
+    const defaultErrorSchema = errorSchema ?? ResponseErrorSchema;
+    return {
+        200: successSchema,
+        400: defaultErrorSchema,
+        401: defaultErrorSchema,
+        403: defaultErrorSchema
+    };
+};
 export const useResponseSchemas = (successSchema, errorSchema) => {
     const { register: errorRegister, send: sendError } = useResponseErrorSchema(400, errorSchema);
     const { register: successRegister, send: sendSuccess } = useResponseSchema(200, successSchema);
@@ -131,13 +140,7 @@ export const useResponseSchemas = (successSchema, errorSchema) => {
             200: successRegister[1],
             400: errorRegister[1],
             401: errorRegister[1],
-            403: errorRegister[1],
-            404: errorRegister[1],
-            409: errorRegister[1],
-            422: errorRegister[1],
-            429: errorRegister[1],
-            500: errorRegister[1],
-            503: errorRegister[1]
+            403: errorRegister[1]
         },
         sendError,
         sendSuccess,

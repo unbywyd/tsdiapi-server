@@ -140,6 +140,20 @@ export const buildResponseCodes = <S extends TSchema, E extends TSchema = typeof
     } as const;
 };
 
+export const buildExtraResponseCodes = <S extends TSchema, E extends TSchema>(
+    successSchema: S,
+    errorSchema?: E
+) => {
+    const defaultErrorSchema = errorSchema ?? ResponseErrorSchema;
+
+    return {
+        200: successSchema,
+        400: defaultErrorSchema,
+        401: defaultErrorSchema,
+        403: defaultErrorSchema
+    }
+}
+
 export const useResponseSchemas = <S extends TSchema, E extends TSchema>(
     successSchema: S,
     errorSchema?: E
@@ -163,13 +177,7 @@ export const useResponseSchemas = <S extends TSchema, E extends TSchema>(
             200: successRegister[1],
             400: errorRegister[1],
             401: errorRegister[1],
-            403: errorRegister[1],
-            404: errorRegister[1],
-            409: errorRegister[1],
-            422: errorRegister[1],
-            429: errorRegister[1],
-            500: errorRegister[1],
-            503: errorRegister[1]
+            403: errorRegister[1]
         },
         sendError,
         sendSuccess,
