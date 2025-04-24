@@ -1,6 +1,8 @@
 import { Static, TSchema, Type } from "@sinclair/typebox";
 
-export class ResponseErrorClass<T, P> {
+export type StatusCode = 200 | 201 | 202 | 204 | 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500 | 503;
+
+export class ResponseErrorClass<T extends StatusCode, P> {
     status: T;
     data: {
         error: string;
@@ -14,7 +16,8 @@ export class ResponseErrorClass<T, P> {
         };
     }
 }
-export class ResponseSuccessClass<T, S> {
+
+export class ResponseSuccessClass<T, S extends StatusCode> {
     status: S;
     data: T;
     constructor(data: T, status: S) {
@@ -22,6 +25,7 @@ export class ResponseSuccessClass<T, S> {
         this.data = data;
     }
 }
+
 export const ResponseErrorSchema = Type.Object({
     error: Type.String(),
     payload: Type.Optional(Type.Any({
@@ -29,38 +33,60 @@ export const ResponseErrorSchema = Type.Object({
     }))
 });
 
-export const useResponseErrorSchema = <S extends TSchema>(schema: S) => {
+export const useResponseErrorSchema = <S extends TSchema, C extends StatusCode>(code: C, schema: S) => {
     const errorSchema = Type.Object({
         error: Type.String(),
         payload: Type.Optional(schema)
     });
 
     const sendError = <P extends Static<S>>(message: string, payload: P) => {
-        return new ResponseErrorClass(message, 400 as const, payload);
+        return new ResponseErrorClass<C, P>(message, code, payload);
     };
 
     return {
-        sendError,
-        errorSchema
+        register: [code, errorSchema] as const,
+        send: sendError
     };
 };
 
-export const useResponseSuccessSchema = <S extends TSchema>(schema: S) => {
-
+export const useResponseSchema = <S extends TSchema, C extends StatusCode>(code: C, schema: S) => {
     const sendSuccess = <P extends Static<S>>(data: P) => {
-        return new ResponseSuccessClass<P, 200>(data, 200 as const);
+        return new ResponseSuccessClass<P, C>(data, code);
     };
 
     return {
-        sendSuccess,
-        successSchema: schema
+        register: [code, schema] as const,
+        send: sendSuccess
     };
 };
 
-export const useResponseSchemas = <S extends TSchema, E extends TSchema>(successSchema: S, errorSchema: E) => {
+export const useResponseSchemas = <S extends TSchema, E extends TSchema, SC extends StatusCode, EC extends StatusCode>(
+    successCode: SC,
+    successSchema: S,
+    errorCode: EC,
+    errorSchema: E
+) => {
+    const { register: errorRegister, send: sendError } = useResponseErrorSchema(errorCode, errorSchema);
+    const { register: successRegister, send: sendSuccess } = useResponseSchema(successCode, successSchema);
     return {
-        ...useResponseErrorSchema(errorSchema),
-        ...useResponseSuccessSchema(successSchema)
+        errorRegister,
+        sendError,
+        successRegister,
+        sendSuccess
+    };
+};
+
+export const useBaseResponseSchemas = <S extends TSchema, E extends TSchema>(
+    successSchema: S,
+    errorSchema: E
+) => {
+    const { register: errorRegister, send: sendError } = useResponseErrorSchema(400, errorSchema);
+    const { register: successRegister, send: sendSuccess } = useResponseSchema(200, successSchema);
+    return {
+        errorRegister,
+        sendError,
+        successRegister,
+        sendSuccess
     };
 };
 

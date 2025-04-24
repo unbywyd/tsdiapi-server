@@ -24,32 +24,46 @@ export const ResponseErrorSchema = Type.Object({
         default: null
     }))
 });
-export const useResponseErrorSchema = (schema) => {
+export const useResponseErrorSchema = (code, schema) => {
     const errorSchema = Type.Object({
         error: Type.String(),
         payload: Type.Optional(schema)
     });
     const sendError = (message, payload) => {
-        return new ResponseErrorClass(message, 400, payload);
+        return new ResponseErrorClass(message, code, payload);
     };
     return {
-        sendError,
-        errorSchema
+        register: [code, errorSchema],
+        send: sendError
     };
 };
-export const useResponseSuccessSchema = (schema) => {
+export const useResponseSchema = (code, schema) => {
     const sendSuccess = (data) => {
-        return new ResponseSuccessClass(data, 200);
+        return new ResponseSuccessClass(data, code);
     };
     return {
-        sendSuccess,
-        successSchema: schema
+        register: [code, schema],
+        send: sendSuccess
     };
 };
-export const useResponseSchemas = (successSchema, errorSchema) => {
+export const useResponseSchemas = (successCode, successSchema, errorCode, errorSchema) => {
+    const { register: errorRegister, send: sendError } = useResponseErrorSchema(errorCode, errorSchema);
+    const { register: successRegister, send: sendSuccess } = useResponseSchema(successCode, successSchema);
     return {
-        ...useResponseErrorSchema(errorSchema),
-        ...useResponseSuccessSchema(successSchema)
+        errorRegister,
+        sendError,
+        successRegister,
+        sendSuccess
+    };
+};
+export const useBaseResponseSchemas = (successSchema, errorSchema) => {
+    const { register: errorRegister, send: sendError } = useResponseErrorSchema(400, errorSchema);
+    const { register: successRegister, send: sendSuccess } = useResponseSchema(200, successSchema);
+    return {
+        errorRegister,
+        sendError,
+        successRegister,
+        sendSuccess
     };
 };
 // Client errors (4xx)
