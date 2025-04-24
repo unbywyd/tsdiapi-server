@@ -3,6 +3,7 @@ import { Static, TDate, TSchema, Type, } from '@sinclair/typebox';
 import { AppContext, UploadFile } from './types.js';
 import { fileTypeFromBuffer } from 'file-type';
 import { MetaSchemaStorage, MetaRouteEntry, metaRouteSchemaStorage } from './meta.js';
+import { ResponseError } from './response.js';
 
 export type FileOptions = {
     maxFileSize?: number;
@@ -522,7 +523,7 @@ export class RouteBuilder<
         fn: (
             req: RequestWithState<Params, Body, Query, Headers, TState>,
             reply: FastifyReply
-        ) => TNewState | ResponseUnion<TResponses> | Promise<TNewState | ResponseUnion<TResponses>>
+        ) => TNewState | Promise<TNewState>
     ): RouteBuilder<Params, Body, Query, Headers, TResponses, TNewState> {
         this.config.resolver = fn;
         return this as unknown as RouteBuilder<
@@ -646,12 +647,24 @@ export class RouteBuilder<
 
         const resolvePreHandler = async (req: FastifyRequest, reply: FastifyReply) => {
             if (resolver) {
-                const result = await resolver(req, reply);
-                if (typeof result === "object" && "status" in result && "data" in result) {
-                    reply.code(result.status).send(result);
+                try {
+                    const result = await resolver(req, reply);
+                    if (result instanceof ResponseError) {
+                        reply.code(result.status).send(result);
+                        return false;
+                    }
+                    req.routeData = result as TState;
+                } catch(error) {
+                    if(error instanceof ResponseError) {
+                        reply.code(error.status).send(error);
+                        return false;
+                    }
+                    reply.status(500).send({
+                        status: 500,
+                        data: { error: error.message },
+                    });
                     return false;
                 }
-                req.routeData = result as TState;
             }
             return true;
         };

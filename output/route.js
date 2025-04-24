@@ -1,6 +1,7 @@
 import { Type, } from '@sinclair/typebox';
 import { fileTypeFromBuffer } from 'file-type';
 import { MetaSchemaStorage, metaRouteSchemaStorage } from './meta.js';
+import { ResponseError } from './response.js';
 export function DateString(defaultValue) {
     return Type.String({
         format: 'date-time',
@@ -369,12 +370,25 @@ export class RouteBuilder {
         }
         const resolvePreHandler = async (req, reply) => {
             if (resolver) {
-                const result = await resolver(req, reply);
-                if (typeof result === "object" && "status" in result && "data" in result) {
-                    reply.code(result.status).send(result);
+                try {
+                    const result = await resolver(req, reply);
+                    if (result instanceof ResponseError) {
+                        reply.code(result.status).send(result);
+                        return false;
+                    }
+                    req.routeData = result;
+                }
+                catch (error) {
+                    if (error instanceof ResponseError) {
+                        reply.code(error.status).send(error);
+                        return false;
+                    }
+                    reply.status(500).send({
+                        status: 500,
+                        data: { error: error.message },
+                    });
                     return false;
                 }
-                req.routeData = result;
             }
             return true;
         };
