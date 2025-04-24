@@ -1,23 +1,22 @@
 import { Static, TSchema, Type } from "@sinclair/typebox";
 
-export type StatusCode = 200 | 201 | 202 | 204 | 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500 | 503;
 
-export class ResponseErrorClass<T extends StatusCode, P> {
+export class ResponseErrorClass<T extends number, P> {
     status: T;
     data: {
         error: string;
-        payload?: P;
+        details?: P;
     }
-    constructor(message: string, status: T, payload?: P) {
+    constructor(message: string, status: T, details?: P) {
         this.status = status;
         this.data = {
             error: message,
-            payload
+            details
         };
     }
 }
 
-export class ResponseSuccessClass<T, S extends StatusCode> {
+export class ResponseClass<T, S extends number> {
     status: S;
     data: T;
     constructor(data: T, status: S) {
@@ -28,19 +27,22 @@ export class ResponseSuccessClass<T, S extends StatusCode> {
 
 export const ResponseErrorSchema = Type.Object({
     error: Type.String(),
-    payload: Type.Optional(Type.Any({
+    details: Type.Optional(Type.Any({
         default: null
     }))
 });
 
-export const useResponseErrorSchema = <S extends TSchema, C extends StatusCode>(code: C, schema: S) => {
+
+export const useResponseErrorSchema = <S extends TSchema, Code extends number>(code: Code, schema?: S) => {
     const errorSchema = Type.Object({
         error: Type.String(),
-        payload: Type.Optional(schema)
+        details: Type.Optional(schema ?? Type.Any({
+            default: null
+        }))
     });
 
-    const sendError = <P extends Static<S>>(message: string, payload: P) => {
-        return new ResponseErrorClass<C, P>(message, code, payload);
+    const sendError = <P extends Static<S>>(message: string, details?: P) => {
+        return new ResponseErrorClass<typeof code, P>(message, code, details);
     };
 
     return {
@@ -49,9 +51,9 @@ export const useResponseErrorSchema = <S extends TSchema, C extends StatusCode>(
     };
 };
 
-export const useResponseSchema = <S extends TSchema, C extends StatusCode>(code: C, schema: S) => {
+export const useResponseSchema = <S extends TSchema, Code extends number>(code: Code, schema: S) => {
     const sendSuccess = <P extends Static<S>>(data: P) => {
-        return new ResponseSuccessClass<P, C>(data, code);
+        return new ResponseClass<P, typeof code>(data, code);
     };
 
     return {
@@ -60,97 +62,94 @@ export const useResponseSchema = <S extends TSchema, C extends StatusCode>(code:
     };
 };
 
-export const useSuccessResponseSchema = <S extends TSchema>(schema: S) => {
-    return useResponseSchema(200, schema);
-}
-
-export const useErrorResponseSchema = <E extends TSchema>(schema: E) => {
-    return useResponseErrorSchema(400, schema);
-}
-
-export const useForbiddenResponseSchema = <E extends TSchema>(schema: E) => {
-    return useResponseErrorSchema(403, schema);
-}
-
-export const useNotFoundResponseSchema = <E extends TSchema>(schema: E) => {
-    return useResponseErrorSchema(404, schema);
-}
-
-export const useConflictResponseSchema = <E extends TSchema>(schema: E) => {
-    return useResponseErrorSchema(409, schema);
-}
-
-export const useUnprocessableEntityResponseSchema = <E extends TSchema>(schema: E) => {
-    return useResponseErrorSchema(422, schema);
-}
-
-export const useTooManyRequestsResponseSchema = <E extends TSchema>(schema: E) => {
-    return useResponseErrorSchema(429, schema);
-}
-
-export const useInternalServerErrorResponseSchema = <E extends TSchema>(schema: E) => {
-    return useResponseErrorSchema(500, schema);
-}
-
-export const useServiceUnavailableResponseSchema = <E extends TSchema>(schema: E) => {
-    return useResponseErrorSchema(503, schema);
-}
-
-
-export const useResponseSchemas = <S extends TSchema, E extends TSchema, SC extends StatusCode, EC extends StatusCode>(
-    successCode: SC,
+export const buildResponseCodes = <S extends TSchema, E extends TSchema = typeof ResponseErrorSchema>(
     successSchema: S,
-    errorCode: EC,
-    errorSchema: E
+    errorSchema?: E
 ) => {
-    const { register: errorRegister, send: sendError } = useResponseErrorSchema(errorCode, errorSchema);
-    const { register: successRegister, send: sendSuccess } = useResponseSchema(successCode, successSchema);
+    const defaultErrorSchema = errorSchema ?? ResponseErrorSchema;
+
     return {
-        errorRegister,
-        sendError,
-        successRegister,
-        sendSuccess
-    };
+        200: successSchema,
+        400: defaultErrorSchema,
+        401: defaultErrorSchema,
+        403: defaultErrorSchema,
+        409: defaultErrorSchema,
+        422: defaultErrorSchema,
+        429: defaultErrorSchema,
+        500: defaultErrorSchema,
+        503: defaultErrorSchema
+    } as const;
 };
 
-export const useBaseResponseSchemas = <S extends TSchema, E extends TSchema>(
+export const useResponseSchemas = <S extends TSchema, E extends TSchema>(
     successSchema: S,
-    errorSchema: E
+    errorSchema?: E
 ) => {
     const { register: errorRegister, send: sendError } = useResponseErrorSchema(400, errorSchema);
     const { register: successRegister, send: sendSuccess } = useResponseSchema(200, successSchema);
+
+    const send: <T extends Static<typeof errorSchema> | Static<typeof successSchema>>(data: T) => ReturnType<typeof sendError> | ReturnType<typeof sendSuccess> = (data) => {
+        if (typeof data === 'object' && 'error' in data) {
+            const error = data as { error: string, details?: Static<E> };
+            return sendError(error.error, error.details ?? undefined) as ReturnType<typeof sendError>;
+        }
+        if (data instanceof ResponseClass) {
+            return sendSuccess(data.data) as ReturnType<typeof sendSuccess>;
+        } else if (data instanceof ResponseErrorClass) {
+            return sendError(data.data.error, data.data.details) as ReturnType<typeof sendError>;
+        }
+    }
     return {
-        errorRegister,
+        codes: {
+            200: successRegister[1],
+            400: errorRegister[1],
+            401: errorRegister[1],
+            403: errorRegister[1],
+            409: errorRegister[1],
+            422: errorRegister[1],
+            429: errorRegister[1],
+            500: errorRegister[1],
+            503: errorRegister[1]
+        },
         sendError,
-        successRegister,
-        sendSuccess
+        sendSuccess,
+        send
     };
 };
 
-// Client errors (4xx)
-export const Response400Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 400 as const, payload); // Bad Response
-export const Response401Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 401 as const, payload); // Unauthorized
-export const Response403Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 403 as const, payload); // Forbidden
-export const Response404Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 404 as const, payload); // Not Found
-export const Response409Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 409 as const, payload); // Conflict
-export const Response422Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 422 as const, payload); // Unprocessable Entity
-export const Response429Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 429 as const, payload); // Too Many Responses
+// Response helpers
+export const responseSuccess = <T>(data: T) => new ResponseClass(data, 200 as const);
+export const response200 = <T>(data: T) => new ResponseClass(data, 200 as const);
+export const response201 = <T>(data: T) => new ResponseClass(data, 201 as const);
+export const response202 = <T>(data: T) => new ResponseClass(data, 202 as const);
+export const response204 = <T>(data: T) => new ResponseClass(data, 204 as const);
+export const responseNull = () => new ResponseClass(null, 204 as const);
+export const responseError = <T>(data: T) => new ResponseClass(data, 400 as const);
+export const responseForbidden = <T>(data: T) => new ResponseClass(data, 403 as const);
+export const responseNotFound = <T>(data: T) => new ResponseClass(data, 404 as const);
+export const responseConflict = <T>(data: T) => new ResponseClass(data, 409 as const);
+export const responseUnprocessableEntity = <T>(data: T) => new ResponseClass(data, 422 as const);
+export const responseTooManyRequests = <T>(data: T) => new ResponseClass(data, 429 as const);
+export const responseInternalServerError = <T>(data: T) => new ResponseClass(data, 500 as const);
+export const responseServiceUnavailable = <T>(data: T) => new ResponseClass(data, 503 as const);
 
-export const ResponseForbiddenError = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 403 as const, payload);
-export const ResponseNotFoundError = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 404 as const, payload);
-export const ResponseConflictError = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 409 as const, payload);
-export const ResponseUnprocessableEntityError = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 422 as const, payload);
-export const ResponseTooManyRequestsError = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 429 as const, payload);
-export const ResponseBadRequestError = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 400 as const, payload);
+
+// Response error with details
+export const response400Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 400 as const, details); // Bad Response
+export const response401Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 401 as const, details); // Unauthorized
+export const response403Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 403 as const, details); // Forbidden
+export const response404Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 404 as const, details); // Not Found
+export const response409Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 409 as const, details); // Conflict
+export const response422Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 422 as const, details); // Unprocessable Entity
+export const response429Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 429 as const, details); // Too Many Responses
+
+export const responseForbiddenError = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 403 as const, details);
+export const responseNotFoundError = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 404 as const, details);
+export const responseConflictError = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 409 as const, details);
+export const responseUnprocessableEntityError = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 422 as const, details);
+export const responseTooManyRequestsError = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 429 as const, details);
+export const responseBadRequestError = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 400 as const, details);
 
 // Server errors (5xx)
-export const Response500Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 500 as const, payload); // Internal Server Error
-export const Response503Error = <P extends TSchema>(message: string, payload?: Static<P>) => new ResponseErrorClass(message, 503 as const, payload); // Service Unavailable
-
-
-export const ResponseSuccess = <T>(data: T) => new ResponseSuccessClass(data, 200 as const);
-export const Response200Success = <T>(data: T) => new ResponseSuccessClass(data, 200 as const);
-export const Response201Success = <T>(data: T) => new ResponseSuccessClass(data, 201 as const);
-export const Response202Success = <T>(data: T) => new ResponseSuccessClass(data, 202 as const);
-export const Response204Success = <T>(data: T) => new ResponseSuccessClass(data, 204 as const);
-export const ResponseNullSuccess = () => new ResponseSuccessClass(null, 204 as const);
+export const response500Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 500 as const, details); // Internal Server Error
+export const response503Error = <P extends TSchema>(message: string, details?: Static<P>) => new ResponseErrorClass(message, 503 as const, details); // Service Unavailable

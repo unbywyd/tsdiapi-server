@@ -1,186 +1,175 @@
 import { Static, TSchema } from "@sinclair/typebox";
-export type StatusCode = 200 | 201 | 202 | 204 | 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500 | 503;
-export declare class ResponseErrorClass<T extends StatusCode, P> {
+export declare class ResponseErrorClass<T extends number, P> {
     status: T;
     data: {
         error: string;
-        payload?: P;
+        details?: P;
     };
-    constructor(message: string, status: T, payload?: P);
+    constructor(message: string, status: T, details?: P);
 }
-export declare class ResponseSuccessClass<T, S extends StatusCode> {
+export declare class ResponseClass<T, S extends number> {
     status: S;
     data: T;
     constructor(data: T, status: S);
 }
 export declare const ResponseErrorSchema: import("@sinclair/typebox").TObject<{
     error: import("@sinclair/typebox").TString;
-    payload: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
 }>;
-export declare const useResponseErrorSchema: <S extends TSchema, C extends StatusCode>(code: C, schema: S) => {
-    register: readonly [C, import("@sinclair/typebox").TObject<{
+export declare const useResponseErrorSchema: <S extends TSchema, Code extends number>(code: Code, schema?: S) => {
+    register: readonly [Code, import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: S extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<S>>;
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (S extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<S>>);
     }>];
-    send: <P extends Static<S>>(message: string, payload: P) => ResponseErrorClass<C, P>;
+    send: <P extends Static<S>>(message: string, details?: P) => ResponseErrorClass<Code, P>;
 };
-export declare const useResponseSchema: <S extends TSchema, C extends StatusCode>(code: C, schema: S) => {
-    register: readonly [C, S];
-    send: <P extends Static<S>>(data: P) => ResponseSuccessClass<P, C>;
+export declare const useResponseSchema: <S extends TSchema, Code extends number>(code: Code, schema: S) => {
+    register: readonly [Code, S];
+    send: <P extends Static<S>>(data: P) => ResponseClass<P, Code>;
 };
-export declare const useSuccessResponseSchema: <S extends TSchema>(schema: S) => {
-    register: readonly [200, S];
-    send: <P extends (S & {
-        params: [];
-    })["static"]>(data: P) => ResponseSuccessClass<P, 200>;
-};
-export declare const useErrorResponseSchema: <E extends TSchema>(schema: E) => {
-    register: readonly [400, import("@sinclair/typebox").TObject<{
+export declare const buildResponseCodes: <S extends TSchema, E extends TSchema = import("@sinclair/typebox").TObject<{
+    error: import("@sinclair/typebox").TString;
+    details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+}>>(successSchema: S, errorSchema?: E) => {
+    readonly 200: S;
+    readonly 400: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    send: <P extends (E & {
-        params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<400, P>;
-};
-export declare const useForbiddenResponseSchema: <E extends TSchema>(schema: E) => {
-    register: readonly [403, import("@sinclair/typebox").TObject<{
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    readonly 401: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    send: <P extends (E & {
-        params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<403, P>;
-};
-export declare const useNotFoundResponseSchema: <E extends TSchema>(schema: E) => {
-    register: readonly [404, import("@sinclair/typebox").TObject<{
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    readonly 403: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    send: <P extends (E & {
-        params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<404, P>;
-};
-export declare const useConflictResponseSchema: <E extends TSchema>(schema: E) => {
-    register: readonly [409, import("@sinclair/typebox").TObject<{
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    readonly 409: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    send: <P extends (E & {
-        params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<409, P>;
-};
-export declare const useUnprocessableEntityResponseSchema: <E extends TSchema>(schema: E) => {
-    register: readonly [422, import("@sinclair/typebox").TObject<{
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    readonly 422: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    send: <P extends (E & {
-        params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<422, P>;
-};
-export declare const useTooManyRequestsResponseSchema: <E extends TSchema>(schema: E) => {
-    register: readonly [429, import("@sinclair/typebox").TObject<{
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    readonly 429: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    send: <P extends (E & {
-        params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<429, P>;
-};
-export declare const useInternalServerErrorResponseSchema: <E extends TSchema>(schema: E) => {
-    register: readonly [500, import("@sinclair/typebox").TObject<{
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    readonly 500: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    send: <P extends (E & {
-        params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<500, P>;
-};
-export declare const useServiceUnavailableResponseSchema: <E extends TSchema>(schema: E) => {
-    register: readonly [503, import("@sinclair/typebox").TObject<{
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
+    readonly 503: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    send: <P extends (E & {
-        params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<503, P>;
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
 };
-export declare const useResponseSchemas: <S extends TSchema, E extends TSchema, SC extends StatusCode, EC extends StatusCode>(successCode: SC, successSchema: S, errorCode: EC, errorSchema: E) => {
-    errorRegister: readonly [EC, import("@sinclair/typebox").TObject<{
-        error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
+export declare const useResponseSchemas: <S extends TSchema, E extends TSchema>(successSchema: S, errorSchema?: E) => {
+    codes: {
+        200: S;
+        400: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+        401: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+        403: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+        409: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+        422: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+        429: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+        500: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+        503: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+    };
     sendError: <P extends (E & {
         params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<EC, P>;
-    successRegister: readonly [SC, S];
+    })["static"]>(message: string, details?: P) => ResponseErrorClass<400, P>;
     sendSuccess: <P extends (S & {
         params: [];
-    })["static"]>(data: P) => ResponseSuccessClass<P, SC>;
-};
-export declare const useBaseResponseSchemas: <S extends TSchema, E extends TSchema>(successSchema: S, errorSchema: E) => {
-    errorRegister: readonly [400, import("@sinclair/typebox").TObject<{
-        error: import("@sinclair/typebox").TString;
-        payload: E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
-    }>];
-    sendError: <P extends (E & {
+    })["static"]>(data: P) => ResponseClass<P, 200>;
+    send: <T extends Static<typeof errorSchema> | Static<typeof successSchema>>(data: T) => ReturnType<(<P extends (E & {
         params: [];
-    })["static"]>(message: string, payload: P) => ResponseErrorClass<400, P>;
-    successRegister: readonly [200, S];
-    sendSuccess: <P extends (S & {
+    })["static"]>(message: string, details?: P) => ResponseErrorClass<400, P>)> | ReturnType<(<P extends (S & {
         params: [];
-    })["static"]>(data: P) => ResponseSuccessClass<P, 200>;
+    })["static"]>(data: P) => ResponseClass<P, 200>)>;
 };
-export declare const Response400Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<400, (P & {
+export declare const responseSuccess: <T>(data: T) => ResponseClass<T, 200>;
+export declare const response200: <T>(data: T) => ResponseClass<T, 200>;
+export declare const response201: <T>(data: T) => ResponseClass<T, 201>;
+export declare const response202: <T>(data: T) => ResponseClass<T, 202>;
+export declare const response204: <T>(data: T) => ResponseClass<T, 204>;
+export declare const responseNull: () => ResponseClass<any, 204>;
+export declare const responseError: <T>(data: T) => ResponseClass<T, 400>;
+export declare const responseForbidden: <T>(data: T) => ResponseClass<T, 403>;
+export declare const responseNotFound: <T>(data: T) => ResponseClass<T, 404>;
+export declare const responseConflict: <T>(data: T) => ResponseClass<T, 409>;
+export declare const responseUnprocessableEntity: <T>(data: T) => ResponseClass<T, 422>;
+export declare const responseTooManyRequests: <T>(data: T) => ResponseClass<T, 429>;
+export declare const responseInternalServerError: <T>(data: T) => ResponseClass<T, 500>;
+export declare const responseServiceUnavailable: <T>(data: T) => ResponseClass<T, 503>;
+export declare const response400Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<400, (P & {
     params: [];
 })["static"]>;
-export declare const Response401Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<401, (P & {
+export declare const response401Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<401, (P & {
     params: [];
 })["static"]>;
-export declare const Response403Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<403, (P & {
+export declare const response403Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<403, (P & {
     params: [];
 })["static"]>;
-export declare const Response404Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<404, (P & {
+export declare const response404Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<404, (P & {
     params: [];
 })["static"]>;
-export declare const Response409Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<409, (P & {
+export declare const response409Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<409, (P & {
     params: [];
 })["static"]>;
-export declare const Response422Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<422, (P & {
+export declare const response422Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<422, (P & {
     params: [];
 })["static"]>;
-export declare const Response429Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<429, (P & {
+export declare const response429Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<429, (P & {
     params: [];
 })["static"]>;
-export declare const ResponseForbiddenError: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<403, (P & {
+export declare const responseForbiddenError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<403, (P & {
     params: [];
 })["static"]>;
-export declare const ResponseNotFoundError: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<404, (P & {
+export declare const responseNotFoundError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<404, (P & {
     params: [];
 })["static"]>;
-export declare const ResponseConflictError: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<409, (P & {
+export declare const responseConflictError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<409, (P & {
     params: [];
 })["static"]>;
-export declare const ResponseUnprocessableEntityError: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<422, (P & {
+export declare const responseUnprocessableEntityError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<422, (P & {
     params: [];
 })["static"]>;
-export declare const ResponseTooManyRequestsError: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<429, (P & {
+export declare const responseTooManyRequestsError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<429, (P & {
     params: [];
 })["static"]>;
-export declare const ResponseBadRequestError: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<400, (P & {
+export declare const responseBadRequestError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<400, (P & {
     params: [];
 })["static"]>;
-export declare const Response500Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<500, (P & {
+export declare const response500Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<500, (P & {
     params: [];
 })["static"]>;
-export declare const Response503Error: <P extends TSchema>(message: string, payload?: Static<P>) => ResponseErrorClass<503, (P & {
+export declare const response503Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseErrorClass<503, (P & {
     params: [];
 })["static"]>;
-export declare const ResponseSuccess: <T>(data: T) => ResponseSuccessClass<T, 200>;
-export declare const Response200Success: <T>(data: T) => ResponseSuccessClass<T, 200>;
-export declare const Response201Success: <T>(data: T) => ResponseSuccessClass<T, 201>;
-export declare const Response202Success: <T>(data: T) => ResponseSuccessClass<T, 202>;
-export declare const Response204Success: <T>(data: T) => ResponseSuccessClass<T, 204>;
-export declare const ResponseNullSuccess: () => ResponseSuccessClass<any, 204>;
 //# sourceMappingURL=response.d.ts.map
