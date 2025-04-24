@@ -71,6 +71,10 @@ export declare const buildResponseCodes: <S extends TSchema, E extends TSchema =
         error: import("@sinclair/typebox").TString;
         details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
     }> | E;
+    readonly 404: import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
+    }> | E;
     readonly 409: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
         details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
@@ -104,6 +108,10 @@ export declare const useResponseSchemas: <S extends TSchema, E extends TSchema>(
             details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
         }>;
         403: import("@sinclair/typebox").TObject<{
+            error: import("@sinclair/typebox").TString;
+            details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
+        }>;
+        404: import("@sinclair/typebox").TObject<{
             error: import("@sinclair/typebox").TString;
             details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny> | (E extends import("@sinclair/typebox").TOptional<infer S_1 extends TSchema> ? import("@sinclair/typebox").TOptional<S_1> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>);
         }>;
