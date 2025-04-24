@@ -46,6 +46,33 @@ export const useResponseSchema = (code, schema) => {
         send: sendSuccess
     };
 };
+export const useSuccessResponseSchema = (schema) => {
+    return useResponseSchema(200, schema);
+};
+export const useErrorResponseSchema = (schema) => {
+    return useResponseErrorSchema(400, schema);
+};
+export const useForbiddenResponseSchema = (schema) => {
+    return useResponseErrorSchema(403, schema);
+};
+export const useNotFoundResponseSchema = (schema) => {
+    return useResponseErrorSchema(404, schema);
+};
+export const useConflictResponseSchema = (schema) => {
+    return useResponseErrorSchema(409, schema);
+};
+export const useUnprocessableEntityResponseSchema = (schema) => {
+    return useResponseErrorSchema(422, schema);
+};
+export const useTooManyRequestsResponseSchema = (schema) => {
+    return useResponseErrorSchema(429, schema);
+};
+export const useInternalServerErrorResponseSchema = (schema) => {
+    return useResponseErrorSchema(500, schema);
+};
+export const useServiceUnavailableResponseSchema = (schema) => {
+    return useResponseErrorSchema(503, schema);
+};
 export const useResponseSchemas = (successCode, successSchema, errorCode, errorSchema) => {
     const { register: errorRegister, send: sendError } = useResponseErrorSchema(errorCode, errorSchema);
     const { register: successRegister, send: sendSuccess } = useResponseSchema(successCode, successSchema);

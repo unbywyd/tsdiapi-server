@@ -417,24 +417,28 @@ export class RouteBuilder<
         code: Code,
         schema: T
     ): RouteBuilder<Params, Body, Query, Headers, MergeStatus<TResponses, Code, T>, TState> {
-        this.extraMetaStorage.add({
-            type: 'response',
-            statusCode: code,
-            schema: schema,
-            id: schema.$id || undefined
-        });
-        this.config.schema.response[code] = Type.Object({
-            status: Type.Literal(code),
-            data: this.withRef(schema)
-        });
-        return this as unknown as RouteBuilder<
-            Params,
-            Body,
-            Query,
-            Headers,
-            MergeStatus<TResponses, Code, T>,
-            TState
-        >;
+        return this.codes({ [code]: schema });
+    }
+
+    public codes<
+        TNewResponses extends Record<number, TSchema>
+    >(
+        responses: TNewResponses
+    ): RouteBuilder<Params, Body, Query, Headers, TResponses & TNewResponses, TState> {
+        for (const [code, schema] of Object.entries(responses)) {
+            const statusCode = Number(code);
+            this.extraMetaStorage.add({
+                type: 'response',
+                statusCode,
+                schema,
+                id: schema.$id || undefined
+            });
+            this.config.schema.response[statusCode] = Type.Object({
+                status: Type.Literal(statusCode),
+                data: this.withRef(schema)
+            });
+        }
+        return this as unknown as RouteBuilder<Params, Body, Query, Headers, TResponses & TNewResponses, TState>;
     }
 
     // --------------------------

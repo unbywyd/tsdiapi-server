@@ -28,6 +28,84 @@ export declare const useResponseSchema: <S extends TSchema, C extends StatusCode
     register: readonly [C, S];
     send: <P extends Static<S>>(data: P) => ResponseSuccessClass<P, C>;
 };
+export declare const useSuccessResponseSchema: <S extends TSchema>(schema: S) => {
+    register: readonly [200, S];
+    send: <P extends (S & {
+        params: [];
+    })["static"]>(data: P) => ResponseSuccessClass<P, 200>;
+};
+export declare const useErrorResponseSchema: <E extends TSchema>(schema: E) => {
+    register: readonly [400, import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
+    }>];
+    send: <P extends (E & {
+        params: [];
+    })["static"]>(message: string, payload: P) => ResponseErrorClass<400, P>;
+};
+export declare const useForbiddenResponseSchema: <E extends TSchema>(schema: E) => {
+    register: readonly [403, import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
+    }>];
+    send: <P extends (E & {
+        params: [];
+    })["static"]>(message: string, payload: P) => ResponseErrorClass<403, P>;
+};
+export declare const useNotFoundResponseSchema: <E extends TSchema>(schema: E) => {
+    register: readonly [404, import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
+    }>];
+    send: <P extends (E & {
+        params: [];
+    })["static"]>(message: string, payload: P) => ResponseErrorClass<404, P>;
+};
+export declare const useConflictResponseSchema: <E extends TSchema>(schema: E) => {
+    register: readonly [409, import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
+    }>];
+    send: <P extends (E & {
+        params: [];
+    })["static"]>(message: string, payload: P) => ResponseErrorClass<409, P>;
+};
+export declare const useUnprocessableEntityResponseSchema: <E extends TSchema>(schema: E) => {
+    register: readonly [422, import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
+    }>];
+    send: <P extends (E & {
+        params: [];
+    })["static"]>(message: string, payload: P) => ResponseErrorClass<422, P>;
+};
+export declare const useTooManyRequestsResponseSchema: <E extends TSchema>(schema: E) => {
+    register: readonly [429, import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
+    }>];
+    send: <P extends (E & {
+        params: [];
+    })["static"]>(message: string, payload: P) => ResponseErrorClass<429, P>;
+};
+export declare const useInternalServerErrorResponseSchema: <E extends TSchema>(schema: E) => {
+    register: readonly [500, import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
+    }>];
+    send: <P extends (E & {
+        params: [];
+    })["static"]>(message: string, payload: P) => ResponseErrorClass<500, P>;
+};
+export declare const useServiceUnavailableResponseSchema: <E extends TSchema>(schema: E) => {
+    register: readonly [503, import("@sinclair/typebox").TObject<{
+        error: import("@sinclair/typebox").TString;
+        payload: E extends import("@sinclair/typebox").TOptional<infer S extends TSchema> ? import("@sinclair/typebox").TOptional<S> : import("@sinclair/typebox").Ensure<import("@sinclair/typebox").TOptional<E>>;
+    }>];
+    send: <P extends (E & {
+        params: [];
+    })["static"]>(message: string, payload: P) => ResponseErrorClass<503, P>;
+};
 export declare const useResponseSchemas: <S extends TSchema, E extends TSchema, SC extends StatusCode, EC extends StatusCode>(successCode: SC, successSchema: S, errorCode: EC, errorSchema: E) => {
     errorRegister: readonly [EC, import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;

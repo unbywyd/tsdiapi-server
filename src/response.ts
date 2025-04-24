@@ -60,6 +60,43 @@ export const useResponseSchema = <S extends TSchema, C extends StatusCode>(code:
     };
 };
 
+export const useSuccessResponseSchema = <S extends TSchema>(schema: S) => {
+    return useResponseSchema(200, schema);
+}
+
+export const useErrorResponseSchema = <E extends TSchema>(schema: E) => {
+    return useResponseErrorSchema(400, schema);
+}
+
+export const useForbiddenResponseSchema = <E extends TSchema>(schema: E) => {
+    return useResponseErrorSchema(403, schema);
+}
+
+export const useNotFoundResponseSchema = <E extends TSchema>(schema: E) => {
+    return useResponseErrorSchema(404, schema);
+}
+
+export const useConflictResponseSchema = <E extends TSchema>(schema: E) => {
+    return useResponseErrorSchema(409, schema);
+}
+
+export const useUnprocessableEntityResponseSchema = <E extends TSchema>(schema: E) => {
+    return useResponseErrorSchema(422, schema);
+}
+
+export const useTooManyRequestsResponseSchema = <E extends TSchema>(schema: E) => {
+    return useResponseErrorSchema(429, schema);
+}
+
+export const useInternalServerErrorResponseSchema = <E extends TSchema>(schema: E) => {
+    return useResponseErrorSchema(500, schema);
+}
+
+export const useServiceUnavailableResponseSchema = <E extends TSchema>(schema: E) => {
+    return useResponseErrorSchema(503, schema);
+}
+
+
 export const useResponseSchemas = <S extends TSchema, E extends TSchema, SC extends StatusCode, EC extends StatusCode>(
     successCode: SC,
     successSchema: S,

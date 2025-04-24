@@ -231,16 +231,22 @@ export class RouteBuilder {
         return this;
     }
     code(code, schema) {
-        this.extraMetaStorage.add({
-            type: 'response',
-            statusCode: code,
-            schema: schema,
-            id: schema.$id || undefined
-        });
-        this.config.schema.response[code] = Type.Object({
-            status: Type.Literal(code),
-            data: this.withRef(schema)
-        });
+        return this.codes({ [code]: schema });
+    }
+    codes(responses) {
+        for (const [code, schema] of Object.entries(responses)) {
+            const statusCode = Number(code);
+            this.extraMetaStorage.add({
+                type: 'response',
+                statusCode,
+                schema,
+                id: schema.$id || undefined
+            });
+            this.config.schema.response[statusCode] = Type.Object({
+                status: Type.Literal(statusCode),
+                data: this.withRef(schema)
+            });
+        }
         return this;
     }
     // --------------------------
