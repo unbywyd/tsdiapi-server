@@ -1,11 +1,19 @@
 import { Static, TSchema } from "@sinclair/typebox";
-export declare class ResponseError<T extends number, P> extends Error {
+export declare class ResponseError<T extends number, P> {
     status: T;
     data: {
         error: string;
         details?: P;
     };
-    constructor(message: string, status: T, details?: P);
+    constructor(status: T, message: string, details?: P);
+    toJSON(): {
+        status: T;
+        data: {
+            error: string;
+            details?: P;
+        };
+    };
+    throw(): void;
 }
 export declare class ResponseBadRequest<T> extends ResponseError<400, T> {
     constructor(message: string, details?: T);
@@ -145,57 +153,32 @@ export declare const response201: <T>(data: T) => Response<T, 201>;
 export declare const response202: <T>(data: T) => Response<T, 202>;
 export declare const response204: <T>(data: T) => Response<T, 204>;
 export declare const responseNull: () => Response<any, 204>;
-export declare const responseError: <T>(data: T) => Response<T, 400>;
-export declare const responseForbidden: <T>(data: T) => Response<T, 403>;
-export declare const responseNotFound: <T>(data: T) => Response<T, 404>;
-export declare const responseConflict: <T>(data: T) => Response<T, 409>;
-export declare const responseUnprocessableEntity: <T>(data: T) => Response<T, 422>;
-export declare const responseTooManyRequests: <T>(data: T) => Response<T, 429>;
-export declare const responseInternalServerError: <T>(data: T) => Response<T, 500>;
-export declare const responseServiceUnavailable: <T>(data: T) => Response<T, 503>;
-export declare const response400Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<400, (P & {
+export declare const responseError: <T>(message: string, details?: T) => ResponseError<400, T>;
+export declare const response400: <P>(message: string, details?: P) => ResponseError<400, P>;
+export declare const response401: <P>(message: string, details?: P) => ResponseError<401, P>;
+export declare const response403: <P>(message: string, details?: P) => ResponseError<403, P>;
+export declare const response404: <P>(message: string, details?: P) => ResponseError<404, P>;
+export declare const response409: <P>(message: string, details?: P) => ResponseError<409, P>;
+export declare const response422: <P>(message: string, details?: P) => ResponseError<422, P>;
+export declare const response429: <P>(message: string, details?: P) => ResponseError<429, P>;
+export declare const response500: <P>(message: string, details?: P) => ResponseError<500, P>;
+export declare const response503: <P>(message: string, details?: P) => ResponseError<503, P>;
+export declare const responseForbidden: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<403, (P & {
     params: [];
 })["static"]>;
-export declare const response401Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<401, (P & {
+export declare const responseNotFound: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<404, (P & {
     params: [];
 })["static"]>;
-export declare const response403Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<403, (P & {
+export declare const responseConflict: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<409, (P & {
     params: [];
 })["static"]>;
-export declare const response404Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<404, (P & {
+export declare const responseUnprocessableEntity: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<422, (P & {
     params: [];
 })["static"]>;
-export declare const response409Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<409, (P & {
+export declare const responseTooManyRequests: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<429, (P & {
     params: [];
 })["static"]>;
-export declare const response422Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<422, (P & {
-    params: [];
-})["static"]>;
-export declare const response429Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<429, (P & {
-    params: [];
-})["static"]>;
-export declare const responseForbiddenError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<403, (P & {
-    params: [];
-})["static"]>;
-export declare const responseNotFoundError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<404, (P & {
-    params: [];
-})["static"]>;
-export declare const responseConflictError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<409, (P & {
-    params: [];
-})["static"]>;
-export declare const responseUnprocessableEntityError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<422, (P & {
-    params: [];
-})["static"]>;
-export declare const responseTooManyRequestsError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<429, (P & {
-    params: [];
-})["static"]>;
-export declare const responseBadRequestError: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<400, (P & {
-    params: [];
-})["static"]>;
-export declare const response500Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<500, (P & {
-    params: [];
-})["static"]>;
-export declare const response503Error: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<503, (P & {
+export declare const responseBadRequest: <P extends TSchema>(message: string, details?: Static<P>) => ResponseError<400, (P & {
     params: [];
 })["static"]>;
 //# sourceMappingURL=response.d.ts.map

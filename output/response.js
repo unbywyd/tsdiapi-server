@@ -1,61 +1,67 @@
 import { Type } from "@sinclair/typebox";
-export class ResponseError extends Error {
+export class ResponseError {
     status;
     data;
-    constructor(message, status, details) {
-        super(message);
-        this.name = 'ResponseError';
-        this.message = message;
+    constructor(status, message, details) {
         this.status = status;
         this.data = {
             error: message,
             details
         };
     }
+    toJSON() {
+        return {
+            status: this.status,
+            data: this.data
+        };
+    }
+    throw() {
+        throw this;
+    }
 }
 export class ResponseBadRequest extends ResponseError {
     constructor(message, details) {
-        super(message, 400, details);
+        super(400, message, details);
     }
 }
 export class ResponseUnauthorized extends ResponseError {
     constructor(message, details) {
-        super(message, 401, details);
+        super(401, message, details);
     }
 }
 export class ResponseForbidden extends ResponseError {
     constructor(message, details) {
-        super(message, 403, details);
+        super(403, message, details);
     }
 }
 export class ResponseNotFound extends ResponseError {
     constructor(message, details) {
-        super(message, 404, details);
+        super(404, message, details);
     }
 }
 export class ResponseConflict extends ResponseError {
     constructor(message, details) {
-        super(message, 409, details);
+        super(409, message, details);
     }
 }
 export class ResponseUnprocessableEntity extends ResponseError {
     constructor(message, details) {
-        super(message, 422, details);
+        super(422, message, details);
     }
 }
 export class ResponseTooManyRequests extends ResponseError {
     constructor(message, details) {
-        super(message, 429, details);
+        super(429, message, details);
     }
 }
 export class ResponseInternalServerError extends ResponseError {
     constructor(message, details) {
-        super(message, 500, details);
+        super(500, message, details);
     }
 }
 export class ResponseServiceUnavailable extends ResponseError {
     constructor(message, details) {
-        super(message, 503, details);
+        super(503, message, details);
     }
 }
 export class Response {
@@ -80,7 +86,7 @@ export const useResponseErrorSchema = (code, schema) => {
         }))
     });
     const sendError = (message, details) => {
-        return new ResponseError(message, code, details);
+        return new ResponseError(code, message, details);
     };
     return {
         register: [code, errorSchema],
@@ -154,29 +160,39 @@ export const response201 = (data) => new Response(data, 201);
 export const response202 = (data) => new Response(data, 202);
 export const response204 = (data) => new Response(data, 204);
 export const responseNull = () => new Response(null, 204);
-export const responseError = (data) => new Response(data, 400);
-export const responseForbidden = (data) => new Response(data, 403);
-export const responseNotFound = (data) => new Response(data, 404);
-export const responseConflict = (data) => new Response(data, 409);
-export const responseUnprocessableEntity = (data) => new Response(data, 422);
-export const responseTooManyRequests = (data) => new Response(data, 429);
-export const responseInternalServerError = (data) => new Response(data, 500);
-export const responseServiceUnavailable = (data) => new Response(data, 503);
+export const responseError = (message, details) => new ResponseError(400, message, details);
 // Response error with details
-export const response400Error = (message, details) => new ResponseError(message, 400, details); // Bad Response
-export const response401Error = (message, details) => new ResponseError(message, 401, details); // Unauthorized
-export const response403Error = (message, details) => new ResponseError(message, 403, details); // Forbidden
-export const response404Error = (message, details) => new ResponseError(message, 404, details); // Not Found
-export const response409Error = (message, details) => new ResponseError(message, 409, details); // Conflict
-export const response422Error = (message, details) => new ResponseError(message, 422, details); // Unprocessable Entity
-export const response429Error = (message, details) => new ResponseError(message, 429, details); // Too Many Responses
-export const responseForbiddenError = (message, details) => new ResponseError(message, 403, details);
-export const responseNotFoundError = (message, details) => new ResponseError(message, 404, details);
-export const responseConflictError = (message, details) => new ResponseError(message, 409, details);
-export const responseUnprocessableEntityError = (message, details) => new ResponseError(message, 422, details);
-export const responseTooManyRequestsError = (message, details) => new ResponseError(message, 429, details);
-export const responseBadRequestError = (message, details) => new ResponseError(message, 400, details);
-// Server errors (5xx)
-export const response500Error = (message, details) => new ResponseError(message, 500, details); // Internal Server Error
-export const response503Error = (message, details) => new ResponseError(message, 503, details); // Service Unavailable
+export const response400 = (message, details) => {
+    return new ResponseError(400, message, details);
+};
+export const response401 = (message, details) => {
+    return new ResponseError(401, message, details);
+};
+export const response403 = (message, details) => {
+    return new ResponseError(403, message, details);
+};
+export const response404 = (message, details) => {
+    return new ResponseError(404, message, details);
+};
+export const response409 = (message, details) => {
+    return new ResponseError(409, message, details);
+};
+export const response422 = (message, details) => {
+    return new ResponseError(422, message, details);
+};
+export const response429 = (message, details) => {
+    return new ResponseError(429, message, details);
+};
+export const response500 = (message, details) => {
+    return new ResponseError(500, message, details);
+};
+export const response503 = (message, details) => {
+    return new ResponseError(503, message, details);
+};
+export const responseForbidden = (message, details) => new ResponseError(403, message, details);
+export const responseNotFound = (message, details) => new ResponseError(404, message, details);
+export const responseConflict = (message, details) => new ResponseError(409, message, details);
+export const responseUnprocessableEntity = (message, details) => new ResponseError(422, message, details);
+export const responseTooManyRequests = (message, details) => new ResponseError(429, message, details);
+export const responseBadRequest = (message, details) => new ResponseError(400, message, details);
 //# sourceMappingURL=response.js.map
