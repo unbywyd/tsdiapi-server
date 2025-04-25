@@ -24,7 +24,9 @@ export class AppConfig<T extends object = Record<string, any>> {
         }
     }
 
-    public getConfig(): T {
-        return this.appConfig as T;
+    public getConfig<C extends object = T>(
+        defaultConfig?: Partial<C>
+    ): C {
+        return { ...defaultConfig, ...this.appConfig } as C;
     }
 }

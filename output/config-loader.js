@@ -18,8 +18,8 @@ export class AppConfig {
             }
         }
     }
-    getConfig() {
-        return this.appConfig;
+    getConfig(defaultConfig) {
+        return { ...defaultConfig, ...this.appConfig };
     }
 }
 //# sourceMappingURL=config-loader.js.map
