@@ -121,7 +121,7 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     headers<T extends TSchema>(schema: T): RouteBuilder<Params, Body, Query, T, TResponses, TState>;
     code<Code extends number, T extends TSchema>(code: Code, schema: T): RouteBuilder<Params, Body, Query, Headers, MergeStatus<TResponses, Code, T>, TState>;
     codes<TNewResponses extends Record<number, TSchema>>(responses: TNewResponses): RouteBuilder<Params, Body, Query, Headers, TResponses & TNewResponses, TState>;
-    guard(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>): this;
+    guard(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>> | void | Promise<void>): this;
     onRequest(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void>): this;
     preValidation(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => void | Promise<void> | false): this;
     preParsing(fn: (this: RouteBuilder, request: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply, payload: unknown) => void | Promise<void>): this;

@@ -255,14 +255,27 @@ export class RouteBuilder {
     // --------------------------
     guard(fn) {
         this.config.guards.push(async (req, reply) => {
-            const result = await fn.call(this, req, reply);
-            if (result === true)
-                return true;
-            if (typeof result === "object" && "status" in result && "data" in result) {
-                reply.code(result.status).send(result);
-                return false;
+            try {
+                const result = await fn.call(this, req, reply);
+                if (result === true || result === undefined)
+                    return true;
+                if ((typeof result === "object") && ("status" in result) && ("data" in result)) {
+                    reply.code(result.status).send(result);
+                    return false;
+                }
+                throw new Error(`Guard returned an invalid error object`);
             }
-            throw new Error(`Guard returned an invalid error object`);
+            catch (error) {
+                if (error instanceof ResponseError) {
+                    reply.code(error.status).send(error);
+                    return false;
+                }
+                if ("status" in error && "data" in error) {
+                    reply.code(error.status).send(error);
+                    return false;
+                }
+                throw error;
+            }
         });
         return this;
     }
@@ -374,6 +387,13 @@ export class RouteBuilder {
                     const result = await resolver(req, reply);
                     if (result instanceof ResponseError) {
                         reply.code(result.status).send(result);
+                        return false;
+                    }
+                    if ((typeof result === "object") && ("status" in result) && ("data" in result)) {
+                        reply.code(result.status).send({
+                            status: result.status,
+                            data: result.data
+                        });
                         return false;
                     }
                     req.routeData = result;

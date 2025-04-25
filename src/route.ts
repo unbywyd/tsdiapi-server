@@ -451,19 +451,31 @@ export class RouteBuilder<
             this: RouteBuilder,
             request: RequestWithState<Params, Body, Query, Headers, TState>,
             reply: FastifyReply
-        ) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>
+        ) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>> | void | Promise<void>
     ): this {
         this.config.guards.push(async (req, reply) => {
-            const result = await fn.call(this, req, reply);
+            try {
+                const result = await fn.call(this, req, reply);
 
-            if (result === true) return true;
-
-            if (typeof result === "object" && "status" in result && "data" in result) {
-                reply.code(result.status).send(result);
-                return false;
+                if (result === true || result === undefined) return true;
+    
+                if ((typeof result === "object") && ("status" in result) && ("data" in result)) {
+                    reply.code(result.status).send(result);
+                    return false;
+                }
+    
+                throw new Error(`Guard returned an invalid error object`);
+            } catch(error) {
+                if(error instanceof ResponseError) {
+                    reply.code(error.status).send(error);
+                    return false;
+                }
+                if("status" in error && "data" in error) {
+                    reply.code(error.status).send(error);
+                    return false;
+                }
+                throw error;
             }
-
-            throw new Error(`Guard returned an invalid error object`);
         });
 
         return this;
@@ -644,13 +656,19 @@ export class RouteBuilder<
         if (!method || !url) {
             throw new Error('Method and URL are required');
         }
-
         const resolvePreHandler = async (req: FastifyRequest, reply: FastifyReply) => {
             if (resolver) {
                 try {
                     const result = await resolver(req, reply);
                     if (result instanceof ResponseError) {
                         reply.code(result.status).send(result);
+                        return false;
+                    }
+                    if((typeof result === "object") && ("status" in result) && ("data" in result)) {
+                        reply.code(result.status).send({
+                            status: result.status,
+                            data: result.data
+                        });
                         return false;
                     }
                     req.routeData = result as TState;
