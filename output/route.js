@@ -232,6 +232,9 @@ export class RouteBuilder {
         return this;
     }
     code(code, schema) {
+        if (code === 204) {
+            return this.codes({ [code]: Type.Object({}) });
+        }
         return this.codes({ [code]: schema });
     }
     codes(responses) {

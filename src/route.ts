@@ -418,6 +418,9 @@ export class RouteBuilder<
         code: Code,
         schema: T
     ): RouteBuilder<Params, Body, Query, Headers, MergeStatus<TResponses, Code, T>, TState> {
+        if (code === 204) {
+            return this.codes({ [code]: Type.Object({}) });
+        }
         return this.codes({ [code]: schema });
     }
 
