@@ -15,7 +15,7 @@ export type OnResponseHook = (this: RouteBuilder, request: RequestWithState, rep
 export type OnErrorHook = (this: RouteBuilder, error: FastifyError, request: RequestWithState, reply: FastifyReply) => void | Promise<void>;
 export type ErrorHandlerHook = (this: RouteBuilder, error: FastifyError, request: RequestWithState, reply: FastifyReply) => void | Promise<void>;
 export type PreParsingHook = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply, payload: unknown) => void | Promise<void>;
-export type GuardFn<TResponses extends Record<number, TSchema>, TState> = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>;
+export type GuardFn<TResponses extends Record<number, TSchema>, TState> = (this: RouteBuilder, request: RequestWithState, reply: FastifyReply) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>> | void | Promise<void>;
 export type StatusSchemas = Record<number, TSchema>;
 export type ResponseUnion<TResponses extends StatusSchemas> = {
     [K in keyof TResponses]: K extends number ? {

@@ -57,7 +57,7 @@ export type GuardFn<TResponses extends Record<number, TSchema>, TState> = (
     this: RouteBuilder,
     request: RequestWithState,
     reply: FastifyReply
-) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>>;
+) => boolean | ResponseUnion<TResponses> | Promise<boolean | ResponseUnion<TResponses>> | void | Promise<void>;
 
 export type StatusSchemas = Record<number, TSchema>;
 
@@ -458,23 +458,24 @@ export class RouteBuilder<
                 const result = await fn.call(this, req, reply);
 
                 if (result === true || result === undefined) return true;
-    
+
                 if ((typeof result === "object") && ("status" in result) && ("data" in result)) {
                     reply.code(result.status).send(result);
                     return false;
                 }
-    
-                throw new Error(`Guard returned an invalid error object`);
-            } catch(error) {
-                if(error instanceof ResponseError) {
+                reply.code(500).send(result?.message || `Guard returned an invalid error object`);
+                return false;
+            } catch (error) {
+                if (error instanceof ResponseError) {
                     reply.code(error.status).send(error);
                     return false;
                 }
-                if("status" in error && "data" in error) {
+                if ("status" in error && "data" in error) {
                     reply.code(error.status).send(error);
                     return false;
                 }
-                throw error;
+                reply.code(500).send(error?.message || `Unknown server error`);
+                return false;
             }
         });
 
@@ -575,10 +576,7 @@ export class RouteBuilder<
                 `Cannot add header to status ${statusCode.toString()}: this status is not defined in .success() or .error()`
             );
         }
-
-        // Добавляем заголовок в HTTP-ответ (Fastify)
         this.config.responseHeaders[name] = value;
-
         const schema = this.config.schema.response[statusCode as number];
         if (schema && typeof schema === 'object') {
             if (!schema.properties) {
@@ -605,9 +603,7 @@ export class RouteBuilder<
         this.config.fileOptions[field as string] = options;
         return this;
     }
-    // ---------------------------------
-    // 10) Модификация маршрута
-    // ---------------------------------
+
     public modify(
         fn: (routeConfig: RouteOptions & { state?: TState }) => Promise<RouteOptions> | RouteOptions
     ): this {
@@ -615,9 +611,6 @@ export class RouteBuilder<
         return this;
     }
 
-    // --------------------------------------
-    // 11) Регистрация маршрута (build)
-    // --------------------------------------
     public async build(): Promise<void> {
         const {
             method,
@@ -664,7 +657,7 @@ export class RouteBuilder<
                         reply.code(result.status).send(result);
                         return false;
                     }
-                    if((typeof result === "object") && ("status" in result) && ("data" in result)) {
+                    if ((typeof result === "object") && ("status" in result) && ("data" in result)) {
                         reply.code(result.status).send({
                             status: result.status,
                             data: result.data
@@ -672,12 +665,12 @@ export class RouteBuilder<
                         return false;
                     }
                     req.routeData = result as TState;
-                } catch(error) {
-                    if(error instanceof ResponseError) {
+                } catch (error) {
+                    if (error instanceof ResponseError) {
                         reply.code(error.status).send(error);
                         return false;
                     }
-                    reply.status(500).send({
+                    reply.code(500).send({
                         status: 500,
                         data: { error: error.message },
                     });
@@ -739,7 +732,7 @@ export class RouteBuilder<
                 if (errorHandler) {
                     errorHandler.call(this, error, req, reply);
                 } else {
-                    reply.status(500).send({
+                    reply.code(500).send({
                         status: 500,
                         data: { error: error.message },
                     });
@@ -824,9 +817,12 @@ export class RouteBuilder<
                         }
                     }
                     if (errors.length > 0) {
-                        reply.status(400).send({
+                        reply.code(400).send({
                             status: 400,
-                            data: { errors },
+                            data: {
+                                error:
+                                    errors.join('\n')
+                            },
                         });
                     } else {
                         if (this.appContext.fileLoader) {
@@ -881,19 +877,42 @@ export class RouteBuilder<
                 }
 
                 if (handler) {
-                    const result = await handler.call(this, req, reply) as ResponseUnion<TResponses>;
-                    if (
-                        result &&
-                        typeof result === 'object' &&
-                        'status' in result
-                    ) {
-                        reply.code(result.status);
+                    try {
+                        const result = await handler.call(this, req, reply) as ResponseUnion<TResponses>;
+                        if (result instanceof ResponseError) {
+                            reply.code(result.status).send(result);
+                            return false;
+                        }
+                        if (
+                            result &&
+                            typeof result === 'object' &&
+                            'status' in result
+                        ) {
+                            reply.code(result.status);
+                            return result;
+                        }
+                        reply.type(this.config.responseType || 'text/html');
                         return result;
+                    } catch (error) {
+                        if (error instanceof ResponseError) {
+                            reply.code(error.status).send(error);
+                            return false;
+                        }
+                        if ("status" in error && "data" in error) {
+                            reply.code(error.status).send({
+                                status: error.status,
+                                data: error.data
+                            });
+                            return false;
+                        }
+                        reply.code(500).send({
+                            status: 500,
+                            data: { error: error.message },
+                        });
+                        return false;
                     }
-                    reply.type(this.config.responseType || 'text/html');
-                    return result;
                 } else {
-                    return { status: 'No handler provided' };
+                    return { status: 500, data: { error: 'No handler provided' } };
                 }
             }
         };
