@@ -466,8 +466,7 @@ export class RouteBuilder<
                     reply.code(result.status).send(result);
                     return false;
                 }
-                reply.code(500).send(result?.message || `Guard returned an invalid error object`);
-                return false;
+                return reply.code(500).send(result?.message || `Guard returned an invalid error object`);
             } catch (error) {
                 if (error instanceof ResponseError) {
                     reply.code(error.status).send(error);
@@ -477,8 +476,7 @@ export class RouteBuilder<
                     reply.code(error.status).send(error);
                     return false;
                 }
-                reply.code(500).send(error?.message || `Unknown server error`);
-                return false;
+                return reply.code(500).send(error?.message || `Unknown server error`);
             }
         });
 
@@ -673,11 +671,10 @@ export class RouteBuilder<
                         reply.code(error.status).send(error);
                         return false;
                     }
-                    reply.code(500).send({
+                    return reply.code(500).send({
                         status: 500,
                         data: { error: error.message },
                     });
-                    return false;
                 }
             }
             return true;
@@ -735,7 +732,7 @@ export class RouteBuilder<
                 if (errorHandler) {
                     errorHandler.call(this, error, req, reply);
                 } else {
-                    reply.code(500).send({
+                    return reply.code(500).send({
                         status: 500,
                         data: { error: error.message },
                     });
@@ -883,39 +880,37 @@ export class RouteBuilder<
                     try {
                         const result = await handler.call(this, req, reply) as ResponseUnion<TResponses>;
                         if (result instanceof ResponseError) {
-                            reply.code(result.status).send(result);
-                            return false;
+                            return reply.code(result.status).send(result);
                         }
                         if (
                             result &&
                             typeof result === 'object' &&
                             'status' in result
                         ) {
-                            reply.code(result.status);
-                            return result;
+                            return reply.code(result.status).send(result);
                         }
                         reply.type(this.config.responseType || 'text/html');
                         return result;
                     } catch (error) {
                         if (error instanceof ResponseError) {
-                            reply.code(error.status).send(error);
-                            return false;
+                            return reply.code(error.status).send(error);
                         }
                         if ("status" in error && "data" in error) {
-                            reply.code(error.status).send({
+                            return reply.code(error.status).send({
                                 status: error.status,
                                 data: error.data
                             });
-                            return false;
                         }
-                        reply.code(500).send({
+                        return reply.code(500).send({
                             status: 500,
-                            data: { error: error.message },
+                            data: { error: error.message || 'Internal server error' }
                         });
-                        return false;
                     }
                 } else {
-                    return { status: 500, data: { error: 'No handler provided' } };
+                    return reply.code(500).send({
+                        status: 500,
+                        data: { error: 'No handler provided' }
+                    });
                 }
             }
         };
