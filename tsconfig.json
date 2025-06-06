@@ -7,7 +7,7 @@
     "noImplicitAny": true,
     "declaration": true,
     "declarationMap": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "NodeNext",
     "sourceMap": true,
     "outDir": "output",
     "baseUrl": ".",

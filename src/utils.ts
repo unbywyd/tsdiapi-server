@@ -6,5 +6,5 @@ export function removeTrailingSlash(path: string): string {
     return path.replace(trailingSlashRegex, '');
 }
 export const makeLoadPath = (appDir: string, ext: string) => {
-    return `${appDir}/**/*.${ext}.*s`;
+    return `${appDir ? appDir + '/' : ''}**/*.${ext}.*s`;
 }

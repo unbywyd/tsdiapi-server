@@ -25,11 +25,11 @@ prisma migrate dev
 
 ## 📦 TypeBox Schema Generation
 
-Prisma models are automatically converted to TypeBox schemas. These schemas are generated in the `@base/api/typebox-schemas/models/` directory and can be used in your routing definitions.
+Prisma models are automatically converted to TypeBox schemas. These schemas are generated in the `@generated/typebox-schemas/models/` directory and can be used in your routing definitions.
 
 ### Example Usage in Routing
 ```typescript
-import { OutputTsdiapiSchema } from "@base/api/typebox-schemas/models/OutputTsdiapiSchema.model.js";
+import { OutputTsdiapiSchema } from "@generated/typebox-schemas/models/OutputTsdiapiSchema.model.js";
 
 export default function FeatureModule({ useRoute }: AppContext): void {
     useRoute("feature")
@@ -104,14 +104,14 @@ export default class FeatureService {
    ```
 
 3. **TypeBox Schemas Location**:
-   - Schemas are generated in `@base/api/typebox-schemas/models/`
-   - Import path format: `@base/api/typebox-schemas/models/YourSchema.model.js`
+   - Schemas are generated in `@generated/typebox-schemas/models/`
+   - Import path format: `@generated/typebox-schemas/models/YourSchema.model.js`
 
 ## 🔄 Workflow
 
 1. Add/update Prisma schema using PrismaQL
 2. Run migrations: `prisma migrate dev`
-3. Use generated TypeBox schemas from `@base/api/typebox-schemas/models/` in routes
+3. Use generated TypeBox schemas from `@generated/typebox-schemas/models/` in routes
 4. Access Prisma client in route handlers or services using `usePrisma<PrismaClient>()`
 
 ## 📚 Additional Resources

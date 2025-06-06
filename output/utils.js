@@ -6,6 +6,6 @@ export function removeTrailingSlash(path) {
     return path.replace(trailingSlashRegex, '');
 }
 export const makeLoadPath = (appDir, ext) => {
-    return `${appDir}/**/*.${ext}.*s`;
+    return `${appDir ? appDir + '/' : ''}**/*.${ext}.*s`;
 };
 //# sourceMappingURL=utils.js.map
