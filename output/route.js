@@ -172,6 +172,25 @@ export class RouteBuilder {
         this.config.description = description;
         return this;
     }
+    operationId(id) {
+        this.config.operationId = id;
+        return this;
+    }
+    generateOperationId() {
+        const { method, url, controller } = this.config;
+        const parts = [];
+        // Add controller if exists
+        if (controller) {
+            parts.push(controller.toLowerCase());
+        }
+        // Add HTTP method
+        parts.push(method.toLowerCase());
+        // Process URL path
+        const urlParts = url.split('/').filter(Boolean);
+        parts.push(...urlParts.map(part => part.toLowerCase()));
+        // Join all parts with underscore
+        return parts.join('_');
+    }
     auth(type = "bearer", guard) {
         if (!this.config.schema.headers) {
             this.config.schema.headers = Type.Object({});
@@ -370,7 +389,7 @@ export class RouteBuilder {
         return this;
     }
     async build() {
-        const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError, version, prefix, controller } = this.config;
+        const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError, version, prefix, controller, operationId } = this.config;
         if (!handler) {
             throw new Error('Handler is required');
         }
@@ -434,7 +453,8 @@ export class RouteBuilder {
             tags: tags || [],
             summary: summary || '',
             description: description || '',
-            security: security || []
+            security: security || [],
+            operationId: operationId || this.generateOperationId()
         };
         if (schema.body) {
             extendedSchema.body = schema.body;

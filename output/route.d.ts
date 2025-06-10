@@ -67,6 +67,7 @@ export interface RouteConfig<TState = unknown> {
     security?: Array<{
         [key: string]: string[];
     }>;
+    operationId?: string;
 }
 export declare function trimSlashes(input: string): string;
 declare module 'fastify' {
@@ -114,6 +115,8 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     tags(tags: string[]): this;
     summary(summary: string): this;
     description(description: string): this;
+    operationId(id: string): this;
+    private generateOperationId;
     auth(type?: "bearer" | "basic" | "apiKey", guard?: GuardFn<TResponses, TState>): this;
     params<T extends TSchema>(schema: T): RouteBuilder<T, Body, Query, Headers, TResponses, TState>;
     body<T extends TSchema>(schema: T): RouteBuilder<Params, T, Query, Headers, TResponses, TState>;

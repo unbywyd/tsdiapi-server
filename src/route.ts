@@ -118,6 +118,7 @@ export interface RouteConfig<TState = unknown> {
     version?: string;
     description?: string;
     security?: Array<{ [key: string]: string[] }>;
+    operationId?: string;
 }
 
 export function trimSlashes(input: string): string {
@@ -329,6 +330,31 @@ export class RouteBuilder<
     public description(description: string): this {
         this.config.description = description;
         return this;
+    }
+
+    public operationId(id: string): this {
+        this.config.operationId = id;
+        return this;
+    }
+
+    private generateOperationId(): string {
+        const { method, url, controller } = this.config;
+        const parts: string[] = [];
+        
+        // Add controller if exists
+        if (controller) {
+            parts.push(controller.toLowerCase());
+        }
+        
+        // Add HTTP method
+        parts.push(method.toLowerCase());
+        
+        // Process URL path
+        const urlParts = url.split('/').filter(Boolean);
+        parts.push(...urlParts.map(part => part.toLowerCase()));
+        
+        // Join all parts with underscore
+        return parts.join('_');
     }
 
     public auth(type: "bearer" | "basic" | "apiKey" = "bearer", guard?: GuardFn<TResponses, TState>): this {
@@ -641,7 +667,8 @@ export class RouteBuilder<
             onError,
             version,
             prefix,
-            controller
+            controller,
+            operationId
         } = this.config;
 
         if (!handler) {
@@ -706,7 +733,8 @@ export class RouteBuilder<
             tags: tags || [],
             summary: summary || '',
             description: description || '',
-            security: security || []
+            security: security || [],
+            operationId: operationId || this.generateOperationId()
         }
         if (schema.body) {
             extendedSchema.body = schema.body;

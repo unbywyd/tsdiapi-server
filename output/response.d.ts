@@ -62,10 +62,7 @@ export declare const useResponseSchema: <S extends TSchema, Code extends number>
     register: readonly [Code, S];
     send: <P extends Static<S>>(data: P) => Response<P, Code>;
 };
-export declare const buildResponseCodes: <S extends TSchema, E extends TSchema = import("@sinclair/typebox").TObject<{
-    error: import("@sinclair/typebox").TString;
-    details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
-}>>(successSchema: S, errorSchema?: E) => {
+export declare const buildResponseCodes: <S extends TSchema, E extends TSchema = typeof ResponseErrorSchema>(successSchema: S, errorSchema?: E) => {
     readonly 200: S;
     readonly 400: import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
