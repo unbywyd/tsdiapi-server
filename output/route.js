@@ -428,7 +428,7 @@ export class RouteBuilder {
         };
         const preHandlersWithResolver = [resolvePreHandler, ...guards];
         const tempFilesPrehandler = async (req) => {
-            if (req.tempFiles.length) {
+            if (Array.isArray(req.tempFiles) && req.tempFiles.length) {
                 const files = groupFilesByFieldname(req.tempFiles);
                 if (!req.body) {
                     req.body = {};
@@ -519,10 +519,11 @@ export class RouteBuilder {
                     }
                 }
                 if (isMultipart && fileOptions) {
+                    const tempFiles = Array.isArray(req.tempFiles) ? req.tempFiles : [];
                     const errors = [];
                     const fileCounts = {};
                     const defaultOptions = fileOptions.default || null;
-                    for (const file of req.tempFiles) {
+                    for (const file of tempFiles) {
                         const options = fileOptions[file.fieldname] || defaultOptions;
                         if (!options)
                             continue;
@@ -541,7 +542,7 @@ export class RouteBuilder {
                         }
                         fileCounts[file.fieldname] = (fileCounts[file.fieldname] || 0) + 1;
                     }
-                    for (const file of req.tempFiles) {
+                    for (const file of tempFiles) {
                         const options = fileOptions[file.fieldname] || defaultOptions;
                         if (options.maxFiles && (fileCounts[file.fieldname] || 0) > options.maxFiles) {
                             const messageError = `Field "${file.fieldname}" exceeds max allowed files (${options.maxFiles}).`;
@@ -559,7 +560,7 @@ export class RouteBuilder {
                         });
                     }
                     else {
-                        if (this.appContext.fileLoader) {
+                        if (this.appContext.fileLoader && Array.isArray(req.tempFiles)) {
                             for (const file of req.tempFiles) {
                                 const uploadedFile = await this.appContext.fileLoader(file, this);
                                 req.tempFiles[req.tempFiles.indexOf(file)] = uploadedFile;
