@@ -41,6 +41,13 @@ export function setupSwagger(appOptions, options) {
             },
             security: []
         },
+        refResolver: {
+            buildLocalReference(json, _baseUri, _fragment, i) {
+                if (json.$id && typeof json.$id === 'string')
+                    return json.$id;
+                return `def-${i}`;
+            }
+        }
     });
     const swaggerUiOptionsHandler = 'function' === typeof appOptions?.swaggerUiOptions ? appOptions?.swaggerUiOptions : (defaultOptions) => defaultOptions;
     const swaggerUiOptions = swaggerUiOptionsHandler({
