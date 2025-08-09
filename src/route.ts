@@ -1,5 +1,6 @@
 import { FastifyError, FastifyInstance, FastifyReply, FastifyRequest, RouteOptions } from 'fastify';
 import { Static, TDate, TSchema, Type, } from '@sinclair/typebox';
+import { RateLimitOptions } from '@fastify/rate-limit';
 import { AppContext, UploadFile } from './types.js';
 import { fileTypeFromBuffer } from 'file-type';
 import { MetaSchemaStorage, MetaRouteEntry, metaRouteSchemaStorage } from './meta.js';
@@ -93,6 +94,7 @@ export interface RouteConfig<TState = unknown> {
     };
     errorHandler?: ErrorHandlerHook;
     fileOptions?: Record<string, FileOptions>;
+    rateLimit?: false | RateLimitOptions;
     guards: Array<GuardFn<StatusSchemas, TState>>;
     preHandlers: Array<PrehandlerFn> | null;
     preValidation: PreValidationHook | null;
@@ -265,7 +267,7 @@ export class RouteBuilder<
     }
 
     // -------------------------
-    // 2) HTTP-методы
+    // 2) HTTP methods
     // -------------------------
 
     public get(path?: string): this {
@@ -316,7 +318,7 @@ export class RouteBuilder<
         return this;
     }
 
-    // Swagger-совместимость
+    // Swagger compatibility
     public tags(tags: string[]): this {
         this.config.tags = tags;
         return this;
@@ -386,7 +388,7 @@ export class RouteBuilder<
 
 
     // --------------------------
-    // 3) Определение схемы
+    // 3) Schema definition
     // --------------------------
 
     public params<T extends TSchema>(
@@ -472,7 +474,7 @@ export class RouteBuilder<
     }
 
     // --------------------------
-    // 4) Guard-функции
+    // 4) Guard functions
     // --------------------------
 
     public guard(
@@ -557,7 +559,7 @@ export class RouteBuilder<
     }
 
     // -------------------------------------------
-    // 6) Передача данных между хуками (resolver)
+    // 6) Data passing between hooks (resolver)
     // -------------------------------------------
     public resolve<TNewState extends TState>(
         fn: (
@@ -578,7 +580,7 @@ export class RouteBuilder<
 
 
     // --------------------------------
-    // 7) Финальный обработчик
+    // 7) Final handler
     // --------------------------------
     public handler(
         fn: (
@@ -591,12 +593,12 @@ export class RouteBuilder<
     }
 
     // ------------------------------------------------
-    // 8) Кастомные заголовки ответа и Cache-Control
+    // 8) Custom response headers and Cache-Control
     // ------------------------------------------------
     public responseHeader<Code extends keyof TResponses>(
         name: string,
         value: string,
-        statusCode: Code // ✅ Ограничиваем только зарегистрированными статусами
+        statusCode: Code // ✅ Limit only to registered statuses
     ): this {
         if (!(statusCode in this.config.schema.response)) {
             throw new Error(
@@ -609,7 +611,7 @@ export class RouteBuilder<
             if (!schema.properties) {
                 schema.properties = {};
             }
-            schema.properties[name] = Type.String(); // Swagger требует type
+            schema.properties[name] = Type.String(); // Swagger requires type
         }
 
         return this;
@@ -617,6 +619,11 @@ export class RouteBuilder<
 
     public cacheControl(value: string): this {
         this.config.cacheControl = value;
+        return this;
+    }
+
+    public rateLimit(options: false | RateLimitOptions): this {
+        this.config.rateLimit = options;
         return this;
     }
     public fileOptions(
@@ -649,6 +656,7 @@ export class RouteBuilder<
             responseHeaders,
             responseType,
             cacheControl,
+            rateLimit,
             modify,
             tags,
             description,
@@ -790,6 +798,7 @@ export class RouteBuilder<
             method,
             url: route,
             schema: extendedSchema,
+            config: rateLimit ? { rateLimit } : undefined,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);
                 if (result === false) {
@@ -813,7 +822,7 @@ export class RouteBuilder<
 
                         if (!options) continue;
 
-                        // Проверка максимального размера
+                        // Check maximum file size
                         if (options.maxFileSize && file.filesize > options.maxFileSize) {
                             errors.push(`File "${file.filename}" exceeds max size of ${options.maxFileSize} bytes.`);
                         }

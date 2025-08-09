@@ -2,6 +2,7 @@ import type { FastifyCorsOptions } from '@fastify/cors';
 import type { FastifyHelmetOptions } from '@fastify/helmet';
 import type { FastifyDynamicSwaggerOptions } from '@fastify/swagger';
 import { FastifySwaggerUiConfigOptions, FastifySwaggerUiOptions } from '@fastify/swagger-ui';
+import type { RateLimitPluginOptions } from '@fastify/rate-limit';
 import { FastifyInstance, FastifyRequest, FastifyServerOptions } from "fastify";
 
 import { FastifyStaticOptions } from '@fastify/static';
@@ -35,6 +36,7 @@ export interface AppOptions<T extends object = Record<string, any>> {
     fastifyOptions?: AppOptionHandler<FastifyServerOptions>;
     corsOptions?: FastifyCorsOptions | boolean | AppOptionHandler<FastifyCorsOptions>;
     helmetOptions?: FastifyHelmetOptions | boolean | AppOptionHandler<FastifyHelmetOptions>;
+    rateLimitOptions?: RateLimitPluginOptions | boolean | AppOptionHandler<RateLimitPluginOptions>;
     swaggerOptions?: AppOptionHandler<FastifyDynamicSwaggerOptions> | FastifyDynamicSwaggerOptions;
     swaggerUiOptions?: AppOptionHandler<FastifySwaggerUiOptions> | FastifySwaggerUiOptions;
     staticOptions?: AppOptionHandler<FastifyStaticOptions> | FastifyStaticOptions | boolean;

@@ -115,7 +115,7 @@ export class RouteBuilder {
         return this;
     }
     // -------------------------
-    // 2) HTTP-методы
+    // 2) HTTP methods
     // -------------------------
     get(path) {
         this.config.method = 'GET';
@@ -159,7 +159,7 @@ export class RouteBuilder {
         }
         return this;
     }
-    // Swagger-совместимость
+    // Swagger compatibility
     tags(tags) {
         this.config.tags = tags;
         return this;
@@ -212,7 +212,7 @@ export class RouteBuilder {
         return this;
     }
     // --------------------------
-    // 3) Определение схемы
+    // 3) Schema definition
     // --------------------------
     params(schema) {
         this.extraMetaStorage.add({
@@ -273,7 +273,7 @@ export class RouteBuilder {
         return this;
     }
     // --------------------------
-    // 4) Guard-функции
+    // 4) Guard functions
     // --------------------------
     guard(fn) {
         this.config.guards.push(async (req, reply) => {
@@ -341,23 +341,23 @@ export class RouteBuilder {
         return this;
     }
     // -------------------------------------------
-    // 6) Передача данных между хуками (resolver)
+    // 6) Data passing between hooks (resolver)
     // -------------------------------------------
     resolve(fn) {
         this.config.resolver = fn;
         return this;
     }
     // --------------------------------
-    // 7) Финальный обработчик
+    // 7) Final handler
     // --------------------------------
     handler(fn) {
         this.config.handler = fn;
         return this;
     }
     // ------------------------------------------------
-    // 8) Кастомные заголовки ответа и Cache-Control
+    // 8) Custom response headers and Cache-Control
     // ------------------------------------------------
-    responseHeader(name, value, statusCode // ✅ Ограничиваем только зарегистрированными статусами
+    responseHeader(name, value, statusCode // ✅ Limit only to registered statuses
     ) {
         if (!(statusCode in this.config.schema.response)) {
             throw new Error(`Cannot add header to status ${statusCode.toString()}: this status is not defined in .success() or .error()`);
@@ -368,12 +368,16 @@ export class RouteBuilder {
             if (!schema.properties) {
                 schema.properties = {};
             }
-            schema.properties[name] = Type.String(); // Swagger требует type
+            schema.properties[name] = Type.String(); // Swagger requires type
         }
         return this;
     }
     cacheControl(value) {
         this.config.cacheControl = value;
+        return this;
+    }
+    rateLimit(options) {
+        this.config.rateLimit = options;
         return this;
     }
     fileOptions(options, key) {
@@ -389,7 +393,7 @@ export class RouteBuilder {
         return this;
     }
     async build() {
-        const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError, version, prefix, controller, operationId } = this.config;
+        const { method, url, schema, guards, resolver, handler, responseHeaders, responseType, cacheControl, rateLimit, modify, tags, description, summary, security, isMultipart, fileOptions, errorHandler, preHandlers, preParsing, preValidation, preSerialization, onRequest, onSend, onResponse, onError, version, prefix, controller, operationId } = this.config;
         if (!handler) {
             throw new Error('Handler is required');
         }
@@ -505,6 +509,7 @@ export class RouteBuilder {
             method,
             url: route,
             schema: extendedSchema,
+            config: rateLimit ? { rateLimit } : undefined,
             preHandler: allPreHandlers.length ? allPreHandlers.map((fn) => async (req, reply) => {
                 const result = await fn.call(this, req, reply);
                 if (result === false) {
@@ -527,7 +532,7 @@ export class RouteBuilder {
                         const options = fileOptions[file.fieldname] || defaultOptions;
                         if (!options)
                             continue;
-                        // Проверка максимального размера
+                        // Check maximum file size
                         if (options.maxFileSize && file.filesize > options.maxFileSize) {
                             errors.push(`File "${file.filename}" exceeds max size of ${options.maxFileSize} bytes.`);
                         }

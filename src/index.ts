@@ -5,6 +5,7 @@ import { AppContext, AppMainOptions, AppOptions, UploadFile } from './types.js';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { setupCors } from './cors.js';
 import { setupHelmet } from './helmet.js';
+import { setupRateLimit } from './rate-limit.js';
 import { setupSwagger } from './swagger.js';
 import { initApp } from './app.js';
 import { pastel, rainbow, cristal, vice, passion } from 'gradient-string';
@@ -19,6 +20,7 @@ import { RouteBuilder, StatusSchemas } from './route.js';
 import { TSchema } from '@sinclair/typebox';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
@@ -54,6 +56,7 @@ export async function createApp<T extends object = Record<string, any>>(options:
 
         const multipartOptions = 'function' === typeof options.multipartOptions ? options.multipartOptions : (defaultOptions: Partial<FastifyMultipartAttachFieldsToBodyOptions>) => defaultOptions;
         options.corsOptions = await setupCors(options.corsOptions);
+        options.rateLimitOptions = setupRateLimit(options.rateLimitOptions);
         options.multipartOptions = multipartOptions({
             limits: {
                 fileSize: 50 * 1024 * 1024,
@@ -171,6 +174,9 @@ export async function createApp<T extends object = Record<string, any>>(options:
         }
         if (context.options.helmetOptions) {
             await fastify.register(helmet, context.options.helmetOptions as helmet.FastifyHelmetOptions);
+        }
+        if (context.options.rateLimitOptions && typeof context.options.rateLimitOptions === 'object') {
+            await fastify.register(rateLimit, context.options.rateLimitOptions as any);
         }
         if (context.options.swaggerOptions) {
             await fastify.register(fastifySwagger, context.options.swaggerOptions);

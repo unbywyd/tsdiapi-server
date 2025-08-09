@@ -1,5 +1,6 @@
 import { FastifyError, FastifyInstance, FastifyReply, FastifyRequest, RouteOptions } from 'fastify';
 import { Static, TDate, TSchema } from '@sinclair/typebox';
+import { RateLimitOptions } from '@fastify/rate-limit';
 import { AppContext, UploadFile } from './types.js';
 export type FileOptions = {
     maxFileSize?: number;
@@ -43,6 +44,7 @@ export interface RouteConfig<TState = unknown> {
     };
     errorHandler?: ErrorHandlerHook;
     fileOptions?: Record<string, FileOptions>;
+    rateLimit?: false | RateLimitOptions;
     guards: Array<GuardFn<StatusSchemas, TState>>;
     preHandlers: Array<PrehandlerFn> | null;
     preValidation: PreValidationHook | null;
@@ -138,6 +140,7 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     handler(fn: (req: RequestWithState<Params, Body, Query, Headers, TState>, reply: FastifyReply) => Promise<ResponseUnion<TResponses> | string> | (ResponseUnion<TResponses> | string)): this;
     responseHeader<Code extends keyof TResponses>(name: string, value: string, statusCode: Code): this;
     cacheControl(value: string): this;
+    rateLimit(options: false | RateLimitOptions): this;
     fileOptions(options: FileOptions, key?: keyof Static<Body>): this;
     modify(fn: (routeConfig: RouteOptions & {
         state?: TState;

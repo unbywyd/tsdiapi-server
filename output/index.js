@@ -3,6 +3,7 @@ import fastifyMultipart from '@fastify/multipart';
 import Fastify from 'fastify';
 import { setupCors } from './cors.js';
 import { setupHelmet } from './helmet.js';
+import { setupRateLimit } from './rate-limit.js';
 import { setupSwagger } from './swagger.js';
 import { initApp } from './app.js';
 import { pastel, rainbow, cristal, vice, passion } from 'gradient-string';
@@ -16,6 +17,7 @@ import { Container } from 'typedi';
 import { RouteBuilder } from './route.js';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
@@ -49,6 +51,7 @@ export async function createApp(options = {}) {
         const cwd = process.cwd();
         const multipartOptions = 'function' === typeof options.multipartOptions ? options.multipartOptions : (defaultOptions) => defaultOptions;
         options.corsOptions = await setupCors(options.corsOptions);
+        options.rateLimitOptions = setupRateLimit(options.rateLimitOptions);
         options.multipartOptions = multipartOptions({
             limits: {
                 fileSize: 50 * 1024 * 1024,
@@ -141,6 +144,9 @@ export async function createApp(options = {}) {
         }
         if (context.options.helmetOptions) {
             await fastify.register(helmet, context.options.helmetOptions);
+        }
+        if (context.options.rateLimitOptions && typeof context.options.rateLimitOptions === 'object') {
+            await fastify.register(rateLimit, context.options.rateLimitOptions);
         }
         if (context.options.swaggerOptions) {
             await fastify.register(fastifySwagger, context.options.swaggerOptions);
