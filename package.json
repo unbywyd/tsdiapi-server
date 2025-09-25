@@ -1,5 +1,5 @@
 {
-  "version": "0.2.44",
+  "version": "0.3.0",
   "name": "@tsdiapi/server",
   "description": "A fully ESM-based, modular TypeScript server built on Fastify",
   "main": "output/index.js",

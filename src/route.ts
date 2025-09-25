@@ -132,7 +132,13 @@ declare module 'fastify' {
     interface FastifyRequest {
         routeData?: unknown;
         tempFiles?: Array<UploadFile>;
-        session?: Record<string, any> | null;
+        session?: {
+            user?: Record<any, any>; // User data from session authentication
+            jwt?: Record<any, any>;  // JWT token data
+            isAuthenticated?: boolean; // Authentication flag
+            destroy(callback?: (err?: Error) => void): void; // Method from @fastify/session
+            regenerate(): Promise<void>; // Method from @fastify/session
+        }
     }
 }
 
