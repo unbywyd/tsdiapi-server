@@ -76,7 +76,13 @@ declare module 'fastify' {
     interface FastifyRequest {
         routeData?: unknown;
         tempFiles?: Array<UploadFile>;
-        session?: Record<string, any> | null;
+        session?: {
+            user?: Record<any, any>;
+            jwt?: Record<any, any>;
+            isAuthenticated?: boolean;
+            destroy(callback?: (err?: Error) => void): void;
+            regenerate(): Promise<void>;
+        };
     }
 }
 export type RequestWithState<Params extends TSchema = TSchema, Body extends TSchema = TSchema, Query extends TSchema = TSchema, Headers extends TSchema = TSchema, TState = unknown> = FastifyRequest<{
