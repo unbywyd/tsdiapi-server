@@ -167,7 +167,24 @@ export async function createApp(options = {}) {
         fastify.get("/404", function (_, res) {
             res.status(404).send({ status: 404, message: "Page Not Found!" });
         });
+        // Add preParsing hook to handle empty body for JSON requests
+        fastify.addHook('preParsing', async (req, _reply, payload) => {
+            // Handle empty body for JSON requests
+            if (req.headers['content-type']?.includes('application/json')) {
+                if (!payload) {
+                    return '{}';
+                }
+                if (payload && typeof payload === 'string' && payload?.trim() === '') {
+                    return '{}';
+                }
+            }
+            return payload;
+        });
         fastify.addHook('preHandler', async (req, _reply) => {
+            // Handle empty body for JSON requests
+            if (req.headers['content-type']?.includes('application/json') && !req.body) {
+                req.body = {};
+            }
             if (req.body && typeof req.body === 'object') {
                 req.body = convertDates(req.body);
             }
@@ -206,6 +223,10 @@ export async function createApp(options = {}) {
             }
         }
         fastify.addHook('preValidation', async (req) => {
+            // Handle empty body for JSON requests
+            if (req.headers['content-type']?.includes('application/json') && !req.body) {
+                req.body = {};
+            }
             if (req.isMultipart()) {
                 const body = req.body;
                 for (const key in body) {
