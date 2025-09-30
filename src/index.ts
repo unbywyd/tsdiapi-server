@@ -168,6 +168,15 @@ export async function createApp<T extends object = Record<string, any>>(options:
             }
         }
 
+        // Add custom JSON parser to handle empty body for application/json requests
+        const defaultJsonParser = fastify.getDefaultJsonParser(undefined, undefined);
+        fastify.addContentTypeParser("application/json", { parseAs: "string" }, (request, body, done) => {
+            if (body === '' || body == null || (Buffer.isBuffer(body) && body.length === 0)) {
+                return done(null, {});
+            }
+            return defaultJsonParser(request, body as string, done);
+        });
+
         await fastify.register(fastifyMultipart, context.options.multipartOptions as FastifyMultipartAttachFieldsToBodyOptions);
         if (context.options.corsOptions) {
             await fastify.register(cors, context.options.corsOptions as cors.FastifyCorsOptions);
