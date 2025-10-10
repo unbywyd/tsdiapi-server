@@ -171,6 +171,10 @@ export async function createApp<T extends object = Record<string, any>>(options:
         // Add custom JSON parser to handle empty body for application/json requests
         const defaultJsonParser = fastify.getDefaultJsonParser(undefined, undefined);
         fastify.addContentTypeParser("application/json", { parseAs: "string" }, (request, body, done) => {
+            // Don't handle multipart requests with custom JSON parser
+            if (request.isMultipart()) {
+                return done(null, body);
+            }
             if (body === '' || body == null || (Buffer.isBuffer(body) && body.length === 0)) {
                 return done(null, {});
             }
@@ -213,8 +217,8 @@ export async function createApp<T extends object = Record<string, any>>(options:
 
         // Add preParsing hook to handle empty body for JSON requests
         fastify.addHook('preParsing', async (req, _reply, payload) => {
-            // Handle empty body for JSON requests
-            if (req.headers['content-type']?.includes('application/json')) {
+            // Handle empty body for JSON requests (but not multipart)
+            if (req.headers['content-type']?.includes('application/json') && !req.isMultipart()) {
                 if (!payload) {
                     return '{}';
                 }
@@ -226,8 +230,8 @@ export async function createApp<T extends object = Record<string, any>>(options:
         });
 
         fastify.addHook('preHandler', async (req, _reply) => {
-            // Handle empty body for JSON requests
-            if (req.headers['content-type']?.includes('application/json') && !req.body) {
+            // Handle empty body for JSON requests (but not multipart)
+            if (req.headers['content-type']?.includes('application/json') && !req.isMultipart() && !req.body) {
                 req.body = {};
             }
             
@@ -266,8 +270,8 @@ export async function createApp<T extends object = Record<string, any>>(options:
         }
 
         fastify.addHook('preValidation', async (req) => {
-            // Handle empty body for JSON requests
-            if (req.headers['content-type']?.includes('application/json') && !req.body) {
+            // Handle empty body for JSON requests (but not multipart)
+            if (req.headers['content-type']?.includes('application/json') && !req.isMultipart() && !req.body) {
                 req.body = {};
             }
             
