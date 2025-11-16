@@ -187,12 +187,71 @@ export class RouteBuilder<
         responseHeaders: {},
     };
 
+    // Track registered schema IDs to detect duplicates early and prevent server hang
+    private static registeredSchemaIds = new Set<string>();
+
+    /**
+     * Clear the schema registry (useful for testing or hot reload scenarios)
+     */
+    public static clearSchemaRegistry(): void {
+        RouteBuilder.registeredSchemaIds.clear();
+    }
+
     withRef<T extends TSchema>(schema: T): TSchema {
         if (schema && schema.$id) {
-            if (!this.fastify.getSchema(schema.$id)) {
-                this.fastify.addSchema(schema);
+            const schemaId = schema.$id;
+            
+            // Check if schema is already registered in Fastify
+            const existingSchema = this.fastify.getSchema(schemaId);
+            if (existingSchema) {
+                // Schema already registered, use reference
+                return Type.Ref(schemaId);
             }
-            return Type.Ref(schema.$id);
+            
+            // Check if we've already processed this schema ID in this build process
+            if (RouteBuilder.registeredSchemaIds.has(schemaId)) {
+                // Schema was already registered during route building, use reference
+                // This prevents duplicate registration which can cause server hang
+                return Type.Ref(schemaId);
+            }
+            
+            // Register new schema
+            try {
+                this.fastify.addSchema(schema);
+                RouteBuilder.registeredSchemaIds.add(schemaId);
+                return Type.Ref(schemaId);
+            } catch (error) {
+                // Handle potential duplicate registration errors
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                
+                // Check if it's a duplicate schema error
+                if (errorMessage.includes('already exists') || 
+                    errorMessage.includes('duplicate') || 
+                    errorMessage.includes('already registered')) {
+                    
+                    console.error(`\n❌ Schema ID Conflict Detected!`);
+                    console.error(`   Schema ID: "${schemaId}"`);
+                    console.error(`   Error: ${errorMessage}\n`);
+                    console.error(`   This error occurs when:`);
+                    console.error(`   1. A schema with $id="${schemaId}" is used with Type.Ref()`);
+                    console.error(`   2. The same schema is used directly (without Type.Ref) in another route\n`);
+                    console.error(`   Solution:`);
+                    console.error(`   - Always use Type.Ref("${schemaId}") when referencing this schema`);
+                    console.error(`   - OR use unique $id values for each schema\n`);
+                    console.error(`   Example:`);
+                    console.error(`   ✅ Good: Type.Ref("${schemaId}")`);
+                    console.error(`   ❌ Bad:  OutputProjectFileWithAssetSchema (direct usage)\n`);
+                    
+                    throw new Error(
+                        `Duplicate schema ID "${schemaId}" detected. ` +
+                        `This will cause server hang. ` +
+                        `Always use Type.Ref("${schemaId}") or use unique $id values.`
+                    );
+                }
+                
+                // Re-throw other errors
+                throw error;
+            }
         }
         return schema;
     }

@@ -3,6 +3,8 @@
 A modern, **ESM-based**, modular TypeScript server built on **Fastify** and **TypeBox**.  
 Designed for **performance**, **flexibility**, and **extensibility**, it provides a solid foundation for API development with minimal complexity.
 
+**Version**: `0.3.5` | **API Version**: `v1` | **Node.js**: `20.x`
+
 📚 **Documentation**: For detailed documentation, visit [https://tsdiapi.com/](https://tsdiapi.com/)
 
 
@@ -42,6 +44,7 @@ Your API is now running! 🎉 Open the browser and check **Swagger UI** at:
 ✅ **File Upload Support** – Handles multipart/form-data  
 ✅ **Plugin System** – Easily extend with plugins
 ✅ **Prisma Integration** – Seamless database integration with TypeBox schemas
+✅ **Request Context** – Request-scoped storage for sharing data across handlers
 
 ---
 
@@ -189,6 +192,151 @@ For more detailed routing documentation, see:
 
 ---
 
+## 📦 Request Context
+
+Request Context provides request-scoped storage for sharing data across handlers, middleware, and services without passing it explicitly.
+
+### Basic Usage Example
+
+```ts
+import { AppContext } from "@tsdiapi/server";
+import { 
+  getRequestContextValue, 
+  setRequestContextValue 
+} from "@tsdiapi/server";
+import { Type } from "@sinclair/typebox";
+
+export default function userController({ useRoute }: AppContext) {
+  // Authentication middleware sets user in context
+  useRoute()
+    .get("/users/me")
+    .code(200, Type.Object({
+      id: Type.String(),
+      name: Type.String(),
+      email: Type.String()
+    }))
+    .code(401, Type.Object({
+      error: Type.String()
+    }))
+    .guard(async (req) => {
+      // Authenticate user and store in context
+      const token = req.headers.authorization;
+      const user = await authenticateUser(token);
+      
+      if (!user) {
+        return { status: 401, data: { error: "Unauthorized" } };
+      }
+      
+      // Store user in request context
+      setRequestContextValue("user", user);
+      return true;
+    })
+    .handler(async (req) => {
+      // Retrieve user from context (no need to pass through params)
+      const user = getRequestContextValue("user");
+      return { status: 200, data: user };
+    })
+    .build();
+}
+```
+
+### Using Context in Services
+
+```ts
+import { Service } from "typedi";
+import { getRequestContextValue } from "@tsdiapi/server";
+
+@Service()
+export class UserService {
+  async getCurrentUser() {
+    // Access context from anywhere in the request chain
+    const user = getRequestContextValue("user");
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    return user;
+  }
+  
+  async getUserId(): string {
+    const user = getRequestContextValue("user");
+    return user?.id;
+  }
+}
+
+// In your controller
+export default function profileController({ useRoute }: AppContext) {
+  useRoute()
+    .get("/profile")
+    .handler(async (req) => {
+      const userService = Container.get(UserService);
+      const user = await userService.getCurrentUser();
+      return { status: 200, data: user };
+    })
+    .build();
+}
+```
+
+### Request ID for Logging
+
+```ts
+import { getRequestContextValue } from "@tsdiapi/server";
+
+export default function loggingController({ useRoute }: AppContext) {
+  useRoute()
+    .post("/data")
+    .handler(async (req) => {
+      // Request ID is automatically available in context
+      const requestId = getRequestContextValue<string>("requestId");
+      
+      logger.info("Processing request", {
+        requestId,
+        url: req.url,
+        method: req.method
+      });
+      
+      // Your business logic here
+      return { status: 200, data: { success: true } };
+    })
+    .build();
+}
+```
+
+### Storing Request-Specific Data
+
+```ts
+export default function cacheController({ useRoute }: AppContext) {
+  useRoute()
+    .get("/expensive-operation")
+    .handler(async (req) => {
+      // Check cache in context
+      const cached = getRequestContextValue("cachedResult");
+      if (cached) {
+        return { status: 200, data: cached };
+      }
+      
+      // Perform expensive operation
+      const result = await expensiveOperation();
+      
+      // Store in context for this request
+      setRequestContextValue("cachedResult", result);
+      
+      return { status: 200, data: result };
+    })
+    .build();
+}
+```
+
+**Key Features:**
+- ✅ **Automatic Isolation** – Each request has its own isolated context
+- ✅ **Async-Safe** – Works correctly with async/await and promises
+- ✅ **Type-Safe** – Full TypeScript support with type inference
+- ✅ **No Memory Leaks** – Context is automatically cleaned up after request
+
+For complete Request Context documentation, see:  
+👉 [Request Context Documentation](./readme.request-context.md)
+
+---
+
 ## ⚙️ Configuration
 
 TSDIAPI automatically loads `.env` variables.  
@@ -214,6 +362,39 @@ await createApp({
 });
 ```
 
+## 📌 Version Information
+
+Access package and API version programmatically:
+
+```ts
+import { VERSION, API_VERSION } from "@tsdiapi/server";
+
+console.log(`Package version: ${VERSION}`);    // "0.3.5"
+console.log(`API version: ${API_VERSION}`);     // "v1"
+
+// Use in your routes
+export default function versionController({ useRoute }: AppContext) {
+  useRoute()
+    .get("/version")
+    .code(200, Type.Object({
+      package: Type.String(),
+      api: Type.String(),
+      node: Type.String()
+    }))
+    .handler(async () => {
+      return {
+        status: 200,
+        data: {
+          package: VERSION,
+          api: API_VERSION,
+          node: process.version
+        }
+      };
+    })
+    .build();
+}
+```
+
 ---
 
 ## �� Documentation
@@ -221,6 +402,7 @@ await createApp({
 - [Configuration Guide](./readme.createapp.md)
 - [Routing Documentation](./readme.routing.md)
 - [Prisma Integration](./readme.prisma.md)
+- [Request Context](./readme.request-context.md)
 
 ---
 

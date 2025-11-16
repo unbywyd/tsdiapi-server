@@ -22,10 +22,15 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
 import { getSyncQueueProvider } from "@tsdiapi/syncqueue";
+import { createRequestContextHook, createRequestContextCleanupHook } from './request-context.js';
+// Package version - exported for API versioning
+export const VERSION = '0.3.5';
+export const API_VERSION = 'v1';
 export * from './types.js';
 export * from './route.js';
 export * from './meta.js';
 export * from './response.js';
+export * from './request-context.js';
 let context = null;
 export function getContext() {
     return context;
@@ -45,6 +50,12 @@ export async function createApp(options = {}) {
         console.log(cristal('👋 Bye bye! Fastify server is shutting down...'));
         done();
     });
+    // Initialize request context for each incoming request
+    // This hook runs at the very beginning of request processing
+    fastify.addHook('onRequest', createRequestContextHook());
+    // Clean up request context after response is sent
+    // This helps prevent memory leaks by clearing large objects
+    fastify.addHook('onResponse', createRequestContextCleanupHook());
     try {
         console.log(pastel.multiline("🚀 Welcome to TSDIAPI!"));
         console.log(rainbow("✨ Starting the server..."));

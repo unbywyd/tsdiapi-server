@@ -97,6 +97,11 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     private appContext;
     private extraMetaStorage;
     private config;
+    private static registeredSchemaIds;
+    /**
+     * Clear the schema registry (useful for testing or hot reload scenarios)
+     */
+    static clearSchemaRegistry(): void;
     withRef<T extends TSchema>(schema: T): TSchema;
     fastify: FastifyInstance;
     constructor(appContext: AppContext<Record<string, any>>);
