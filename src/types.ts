@@ -45,10 +45,10 @@ export interface AppOptions<T extends object = Record<string, any>> {
     /**
      * Legacy option: Enable automatic schema registration from .schemas.ts files
      * 
-     * @default false - By default, only explicitly registered schemas (via useSchema()) are registered
+     * @default false - By default, only explicitly registered schemas (via addSchema()) are registered
      * 
      * When enabled, automatically scans and registers all schemas with $id from .schemas.ts files.
-     * This is a legacy feature for backward compatibility. New projects should use useSchema() explicitly.
+     * This is a legacy feature for backward compatibility. New projects should use addSchema() explicitly.
      * 
      * @example
      * ```typescript
@@ -60,25 +60,22 @@ export interface AppOptions<T extends object = Record<string, any>> {
      */
     legacyAutoSchemaRegistration?: boolean;
     /**
-     * Require $id property for all schemas used in routes
+     * Enable logging of duplicate schema structure warnings
      * 
-     * @default true - By default, all schemas must have explicit $id property
+     * @default false - Duplicate warnings are disabled by default
      * 
-     * When true (default), all schemas used in routes (params, body, query, headers, response) must have $id property.
-     * When false, schemas without $id will automatically get unique IDs generated based on route context.
+     * When enabled, the schema registry will log warnings when it detects schemas with identical structures.
+     * This can be useful for identifying opportunities to create shared schemas and reduce duplication.
      * 
      * @example
      * ```typescript
-     * // Default: require explicit $id (strict mode)
-     * createApp({}); // requireSchemaId: true by default
-     * 
-     * // Allow auto-generation of $id if missing
+     * // Enable duplicate schema warnings
      * createApp({
-     *   requireSchemaId: false
+     *   logDuplicateSchemas: true
      * });
      * ```
      */
-    requireSchemaId?: boolean;
+    logDuplicateSchemas?: boolean;
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;
     preReady?(ctx: AppContext<T>): Promise<void> | void;

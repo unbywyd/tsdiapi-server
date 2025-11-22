@@ -94,9 +94,19 @@ export const ResponseErrorSchema = Type.Object({
     details: Type.Optional(Type.Any({
         default: null
     }))
-}, {
-    $id: 'ResponseErrorSchema'
-});
+}, { $id: 'ResponseErrorSchema' });
+
+// Simple success/failure response schemas
+export const ResponseSuccessSchema = Type.Object({
+    success: Type.Literal(true)
+}, { $id: 'ResponseSuccessSchema' });
+
+export const ResponseFailureSchema = Type.Object({
+    success: Type.Literal(false),
+    error: Type.Optional(Type.String())
+}, { $id: 'ResponseFailureSchema' });
+
+// Schema will be registered automatically when used in routes
 
 
 export const useResponseErrorSchema = <S extends TSchema, Code extends number>(code: Code, schema?: S) => {
@@ -105,8 +115,6 @@ export const useResponseErrorSchema = <S extends TSchema, Code extends number>(c
         details: Type.Optional(schema ?? Type.Any({
             default: null
         }))
-    }, {
-        $id: `ResponseErrorSchema_${code}`
     });
 
     const sendError = <P extends Static<S>>(message: string, details?: P) => {
@@ -197,13 +205,24 @@ export const useResponseSchemas = <S extends TSchema, E extends TSchema>(
 
 // Response helpers
 export const responseSuccess = <T>(data: T) => new Response(data, 200 as const);
+
 export const response200 = <T>(data: T) => new Response(data, 200 as const);
 export const response201 = <T>(data: T) => new Response(data, 201 as const);
 export const response202 = <T>(data: T) => new Response(data, 202 as const);
-export const response204 = <T>(data: T) => new Response(data, 204 as const);
+export const response204 = () => new Response(null, 204 as const);
 export const responseNull = () => new Response(null, 204 as const);
 export const responseError = <T>(message: string, details?: T) => new ResponseError(400, message, details);
 
+// Simple success/failure helpers
+// Returns { success: true } with status 200
+export const responseOk = () => new Response({ success: true }, 200 as const);
+
+// Returns { success: false } with status 400
+// Optionally includes error message: { success: false, error: "message" }
+export const responseFail = (error?: string) => {
+    const data = error ? { success: false, error } : { success: false };
+    return new Response(data, 400 as const);
+};
 
 // Response error with details
 export const response400 = <P>(message: string, details?: P) => {

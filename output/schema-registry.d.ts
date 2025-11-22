@@ -2,20 +2,93 @@ import { FastifyInstance } from 'fastify';
 import { TSchema } from '@sinclair/typebox';
 /**
  * Schema registry for managing TypeBox schemas with $id
- * Automatically resolves dependencies and registers schemas in correct order
+ *
+ * NOTE: Schemas must be registered in correct dependency order.
+ * If a schema uses Type.Ref() to reference another schema, the referenced
+ * schema must be registered first. Fastify will throw an error otherwise.
  */
+export interface SchemaRegistryOptions {
+    /**
+     * Enable logging of duplicate schema structure warnings
+     * @default false - Duplicate warnings are disabled by default
+     */
+    logDuplicateSchemas?: boolean;
+}
 export declare class SchemaRegistry {
     private registeredIds;
     private schemaMap;
-    private dependencies;
+    private pendingSchemas;
+    private flushed;
     readonly fastify: FastifyInstance;
-    constructor(fastify: FastifyInstance);
+    private readonly options;
+    private originalAddSchema?;
+    constructor(fastify: FastifyInstance, options?: SchemaRegistryOptions);
     /**
-     * Extract all schema IDs referenced via Type.Ref() from a schema
+     * Override fastify.addSchema to use our addSchema method
+     * This ensures all schema registration goes through our unified controller
      */
-    private extractDependencies;
+    private overrideFastifyAddSchema;
     /**
-     * Register a schema with dependency resolution
+     * Restore original fastify.addSchema (useful for testing)
+     */
+    restoreFastifyAddSchema(): void;
+    /**
+     * Add schema to registry (safe duplicate registration)
+     * - Requires $id (throws if missing)
+     * - Checks for duplicates in registry and Fastify (silently skips if found)
+     * - If not flushed yet: stores in pendingSchemas for later registration
+     * - If already flushed: registers immediately in Fastify
+     * - Returns schema with $id for type safety
+     *
+     * NOTE: Dependencies must be registered before schemas that reference them.
+     * Fastify will throw an error if a referenced schema is not registered.
+     */
+    addSchema<T extends TSchema>(schema: T): T & {
+        $id: string;
+    };
+    /**
+     * Create a schema reference (Type.Ref())
+     * Uses only string ID with generic type parameter to avoid circular dependency issues.
+     * Generic type parameter is REQUIRED to ensure type safety.
+     *
+     * @example
+     * ```typescript
+     * registry.refSchema<typeof MySchema>('MySchema')
+     * ```
+     */
+    refSchema<T extends TSchema>(schemaId: string): T & {
+        $id: string;
+    };
+    /**
+     * Flush all pending schemas to Fastify
+     * Registers all schemas from lazy container in order they were added
+     * After flush, all new schemas will be registered immediately
+     *
+     * NOTE: Schemas must be registered in correct dependency order.
+     * If a schema references another schema via Type.Ref(), the referenced
+     * schema must be registered first. Fastify will throw an error otherwise.
+     */
+    flushSchemas(): void;
+    /**
+     * Check if schema is a response wrapper (has structure { status: Literal, data: T })
+     * Response wrappers are generated automatically and should be excluded from duplicate detection
+     */
+    private isResponseWrapper;
+    /**
+     * Check if schema is a Prisma-generated schema
+     * Prisma-generated schemas follow similar patterns but have different fields, so they shouldn't be flagged as duplicates
+     */
+    private isPrismaGeneratedSchema;
+    /**
+     * Check for duplicate schemas by structure (not just by name)
+     * Returns array of duplicate schema IDs if found
+     * Checks both in-memory registry and Fastify instance
+     * Excludes response wrappers from duplicate detection (they all have same structure by design)
+     */
+    private findDuplicateSchemas;
+    /**
+     * Register a schema with duplicate detection
+     * NOTE: Dependencies must be registered before schemas that reference them.
      */
     register(schema: TSchema): void;
     /**
@@ -23,15 +96,15 @@ export declare class SchemaRegistry {
      */
     registerMany(schemas: TSchema[]): void;
     /**
-     * Resolve and register all schemas in correct dependency order
+     * Register all schemas from schemaMap in Fastify
+     * NOTE: Schemas must be registered in correct dependency order.
+     * Fastify will throw an error if referenced schemas are not registered.
      */
     resolveAndRegister(): void;
     /**
-     * Topological sort for dependency resolution
-     */
-    private topologicalSort;
-    /**
      * Register schema in Fastify instance
+     * Uses original Fastify method to avoid infinite recursion
+     * Optimized: removed expensive structural comparison for performance
      */
     private registerInFastify;
     /**
@@ -43,6 +116,18 @@ export declare class SchemaRegistry {
      */
     getRegisteredIds(): string[];
     /**
+     * Get schema by ID from registry (checks both pending and registered schemas)
+     */
+    getSchema(schemaId: string): TSchema | undefined;
+    /**
+     * Get count of pending schemas (not yet flushed to Fastify)
+     */
+    getPendingCount(): number;
+    /**
+     * Check if schemas have been flushed
+     */
+    isFlushed(): boolean;
+    /**
      * Clear registry (useful for testing)
      */
     clear(): void;
@@ -52,89 +137,62 @@ export declare class SchemaRegistry {
  */
 export declare function extractSchemasFromModule(module: any): TSchema[];
 /**
- * Schema registration options
- */
-export interface RegisterSchemaOptions {
-    /**
-     * Explicit schema ID. If not provided, will be auto-generated from schema name or variable name
-     */
-    id?: string;
-    /**
-     * Variable name (used for auto-generating $id if id not provided)
-     */
-    name?: string;
-    /**
-     * Whether to validate schema structure
-     * @default true
-     */
-    validate?: boolean;
-    /**
-     * Whether to check dependencies
-     * @default true
-     */
-    checkDependencies?: boolean;
-    /**
-     * Whether to throw error if schema already registered with different definition
-     * @default true
-     */
-    strict?: boolean;
-}
-/**
- * Unified function for schema registration and reference creation
- *
- * This function combines registration and reference creation:
- * - Registers schema with automatic $id generation if needed
- * - Validates schema structure
- * - Checks and registers dependencies
- * - Prevents duplicate registrations
- * - Returns registered schema for use in routes
- * - Can be used to create Type.Ref() for nested schemas
- *
- * @example
- * ```typescript
- * import { useSchema, Type } from '@tsdiapi/server';
- *
- * // Register schema (auto-generates $id)
- * export const MySchema = useSchema(
- *   Type.Object({ name: Type.String() }),
- *   'MySchema'
- * );
- *
- * // Use in route
- * useRoute('project')
- *   .body(MySchema) // ✅ Works - schema is registered
- *   .build();
- *
- * // Use in nested schema (creates Type.Ref())
- * export const ListSchema = useSchema(
- *   Type.Object({
- *     items: Type.Array(useSchema(MySchema)) // ✅ Creates Type.Ref()
- *   }),
- *   'ListSchema'
- * );
- * ```
- */
-export declare function useSchema<T extends TSchema>(schema: T): T & {
-    $id: string;
-};
-export declare function useSchema<T extends TSchema>(schema: T, nameOrOptions: string | RegisterSchemaOptions): T & {
-    $id: string;
-};
-/**
  * Get or create global schema registry
  */
-export declare function getSchemaRegistry(fastify?: FastifyInstance): SchemaRegistry;
+export declare function getSchemaRegistry(fastify?: FastifyInstance, options?: SchemaRegistryOptions): SchemaRegistry;
 /**
  * Initialize global schema registry
  */
-export declare function initializeSchemaRegistry(fastify: FastifyInstance): SchemaRegistry;
+export declare function initializeSchemaRegistry(fastify: FastifyInstance, options?: SchemaRegistryOptions): SchemaRegistry;
 /**
  * Clear global schema registry
  */
 export declare function clearSchemaRegistry(): void;
 /**
+ * Global addSchema function - unified schema registration controller
+ * Adds schema to lazy container (safe duplicate registration)
+ * Returns schema with $id for type safety
+ *
+ * If registry is not initialized, schema is queued and will be registered when registry is initialized.
+ *
+ * @example
+ * ```typescript
+ * import { addSchema, Type } from '@tsdiapi/server';
+ *
+ * const MySchema = addSchema(Type.Object({ name: Type.String() }, { $id: 'MySchema' }));
+ * ```
+ */
+export declare function addSchema<T extends TSchema>(schema: T): T & {
+    $id: string;
+};
+/**
+ * Global refSchema function - create schema reference
+ *
+ * Uses only string ID with generic type parameter to avoid circular dependency issues.
+ * Generic type parameter is REQUIRED to ensure type safety.
+ * This approach prevents TypeScript from trying to resolve schema types at compile time.
+ *
+ * @example
+ * ```typescript
+ * import { refSchema, Type, addSchema } from '@tsdiapi/server';
+ *
+ * const MySchema = addSchema(Type.Object({ name: Type.String() }, { $id: 'MySchema' }));
+ *
+ * // ✅ CORRECT - Use string ID with REQUIRED generic type
+ * const ref = refSchema<typeof MySchema>('MySchema');
+ * ```
+ */
+export declare function refSchema<T extends TSchema>(schemaId: string): T & {
+    $id: string;
+};
+/**
+ * Flush all pending schemas to Fastify
+ * Should be called before server starts to register all schemas
+ */
+export declare function flushSchemas(): void;
+/**
  * Automatically scan and register all schemas from .schemas.ts files
  * This should be called before loading route modules
  */
-export declare function autoRegisterSchemas(fastify: FastifyInstance, apiDir: string): Promise<void>;
+export declare function autoRegisterSchemas(fastify: FastifyInstance, apiDir: string, options?: SchemaRegistryOptions): Promise<void>;
 //# sourceMappingURL=schema-registry.d.ts.map

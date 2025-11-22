@@ -41,10 +41,10 @@ export interface AppOptions<T extends object = Record<string, any>> {
     /**
      * Legacy option: Enable automatic schema registration from .schemas.ts files
      *
-     * @default false - By default, only explicitly registered schemas (via useSchema()) are registered
+     * @default false - By default, only explicitly registered schemas (via addSchema()) are registered
      *
      * When enabled, automatically scans and registers all schemas with $id from .schemas.ts files.
-     * This is a legacy feature for backward compatibility. New projects should use useSchema() explicitly.
+     * This is a legacy feature for backward compatibility. New projects should use addSchema() explicitly.
      *
      * @example
      * ```typescript
@@ -55,6 +55,23 @@ export interface AppOptions<T extends object = Record<string, any>> {
      * ```
      */
     legacyAutoSchemaRegistration?: boolean;
+    /**
+     * Enable logging of duplicate schema structure warnings
+     *
+     * @default false - Duplicate warnings are disabled by default
+     *
+     * When enabled, the schema registry will log warnings when it detects schemas with identical structures.
+     * This can be useful for identifying opportunities to create shared schemas and reduce duplication.
+     *
+     * @example
+     * ```typescript
+     * // Enable duplicate schema warnings
+     * createApp({
+     *   logDuplicateSchemas: true
+     * });
+     * ```
+     */
+    logDuplicateSchemas?: boolean;
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;
     preReady?(ctx: AppContext<T>): Promise<void> | void;

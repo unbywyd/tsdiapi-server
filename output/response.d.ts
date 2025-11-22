@@ -51,6 +51,13 @@ export declare const ResponseErrorSchema: import("@sinclair/typebox").TObject<{
     error: import("@sinclair/typebox").TString;
     details: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TAny>;
 }>;
+export declare const ResponseSuccessSchema: import("@sinclair/typebox").TObject<{
+    success: import("@sinclair/typebox").TLiteral<true>;
+}>;
+export declare const ResponseFailureSchema: import("@sinclair/typebox").TObject<{
+    success: import("@sinclair/typebox").TLiteral<false>;
+    error: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TString>;
+}>;
 export declare const useResponseErrorSchema: <S extends TSchema, Code extends number>(code: Code, schema?: S) => {
     register: readonly [Code, import("@sinclair/typebox").TObject<{
         error: import("@sinclair/typebox").TString;
@@ -148,9 +155,19 @@ export declare const responseSuccess: <T>(data: T) => Response<T, 200>;
 export declare const response200: <T>(data: T) => Response<T, 200>;
 export declare const response201: <T>(data: T) => Response<T, 201>;
 export declare const response202: <T>(data: T) => Response<T, 202>;
-export declare const response204: <T>(data: T) => Response<T, 204>;
+export declare const response204: () => Response<any, 204>;
 export declare const responseNull: () => Response<any, 204>;
 export declare const responseError: <T>(message: string, details?: T) => ResponseError<400, T>;
+export declare const responseOk: () => Response<{
+    success: boolean;
+}, 200>;
+export declare const responseFail: (error?: string) => Response<{
+    success: boolean;
+    error: string;
+} | {
+    success: boolean;
+    error?: undefined;
+}, 400>;
 export declare const response400: <P>(message: string, details?: P) => ResponseError<400, P>;
 export declare const response401: <P>(message: string, details?: P) => ResponseError<401, P>;
 export declare const response403: <P>(message: string, details?: P) => ResponseError<403, P>;

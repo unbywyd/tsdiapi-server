@@ -1,62 +1,101 @@
-# useSchema() Helper Function Examples
+# Schema Reference Examples: Type.Ref() and refSchema()
 
 ## Overview
 
-The `useSchema()` helper function is a type-safe wrapper around `Type.useSchema()` that automatically extracts `$id` from schema objects, eliminating the need to manually type schema IDs as strings.
+When creating schema references, you have two options:
+- ✅ **`Type.Ref('SchemaId')`** - Use string ID directly (recommended)
+- ✅ **`refSchema<typeof Schema>('SchemaId')`** - Type-safe wrapper with generic type
+
+Both create `Type.Ref()` references. The choice depends on your preference for type safety.
+
+## ⚠️ Important: Order of Registration
+
+**Base schemas MUST be registered BEFORE dependent schemas!**
+
+```typescript
+// ✅ CORRECT ORDER
+export const ItemSchema = addSchema(...); // Register first
+export const ListSchema = addSchema(...); // Register after, uses Type.Ref('ItemSchema')
+```
 
 ## Basic Usage
 
-### Before (Manual String IDs)
+### Option 1: Using Type.Ref() (Recommended)
 
 ```typescript
-import { Type } from '@sinclair/typebox';
-import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
+import { addSchema, Type } from '@tsdiapi/server';
 
-export const ListSchema = Type.Object({
-  items: Type.Array(Type.useSchema('OutputProjectSchema')) // ❌ Manual string ID
-}, {
-  $id: 'ListSchema'
-});
+// ✅ STEP 1: Register base schema FIRST
+export const ItemSchema = addSchema(
+  Type.Object({
+    id: Type.String(),
+    name: Type.String()
+  }, { $id: 'ItemSchema' })
+);
+
+// ✅ STEP 2: Register dependent schema AFTER
+export const ListSchema = addSchema(
+  Type.Object({
+    items: Type.Array(Type.Ref('ItemSchema')) // ✅ Use Type.Ref() with string ID
+  }, { $id: 'ListSchema' })
+);
 ```
 
-### After (Using useSchema() Helper)
+### Option 2: Using refSchema()
 
 ```typescript
-import { Type, useSchema } from '@tsdiapi/server';
-import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
+import { addSchema, refSchema, Type } from '@tsdiapi/server';
 
-export const ListSchema = Type.Object({
-  items: Type.Array(useSchema(OutputProjectSchema)) // ✅ Auto-extracts $id
-}, {
-  $id: 'ListSchema'
-});
+// ✅ STEP 1: Register base schema FIRST
+export const ItemSchema = addSchema(
+  Type.Object({
+    id: Type.String(),
+    name: Type.String()
+  }, { $id: 'ItemSchema' })
+);
+
+// ✅ STEP 2: Register dependent schema AFTER
+export const ListSchema = addSchema(
+  Type.Object({
+    items: Type.Array(refSchema<typeof ItemSchema>('ItemSchema')) // ✅ Use refSchema() with generic type
+  }, { $id: 'ListSchema' })
+);
 ```
 
 ## Benefits
 
-### 1. No Manual String IDs
+### 1. Type Safety with refSchema()
 
 ```typescript
-// ❌ Before - Easy to mistype
-Type.useSchema('OutputProjectSchema') // Typo: 'OutputProjctSchema' won't be caught
+// ✅ refSchema() provides type safety
+import { refSchema } from '@tsdiapi/server';
 
-// ✅ After - TypeScript validates
-useSchema(OutputProjectSchema) // Compile error if schema doesn't exist
+// TypeScript validates the schema exists
+const ref = refSchema<typeof ItemSchema>('ItemSchema'); // ✅ Type-safe
+
+// ❌ Type.Ref() doesn't validate at compile time
+const ref = Type.Ref('ItemSchema'); // No compile-time validation
 ```
 
 ### 2. IDE Autocomplete
 
 ```typescript
-// ✅ IDE can autocomplete schema names
-useSchema(OutputProject...) // IDE suggests: OutputProjectSchema, OutputProjectFileSchema, etc.
+// ✅ IDE can autocomplete schema names when using refSchema()
+refSchema<typeof Item... // IDE suggests: ItemSchema, ItemListSchema, etc.
+
+// ❌ Type.Ref() requires manual typing
+Type.Ref('Item... // No autocomplete
 ```
 
 ### 3. Refactoring Safety
 
 ```typescript
-// If you rename OutputProjectSchema to OutputProjectItemSchema:
-// ❌ Type.useSchema('OutputProjectSchema') - No error, breaks at runtime
-// ✅ useSchema(OutputProjectSchema) - TypeScript error, caught at compile time
+// If you rename ItemSchema to ItemItemSchema:
+// ✅ refSchema() - TypeScript error if schema doesn't exist
+refSchema<typeof ItemSchema>('ItemSchema'); // Compile error
+
+// ❌ Type.Ref() - No error, breaks at runtime
+Type.Ref('ItemSchema'); // No compile error, breaks at runtime
 ```
 
 ## Real-World Examples
@@ -64,74 +103,92 @@ useSchema(OutputProject...) // IDE suggests: OutputProjectSchema, OutputProjectF
 ### Example 1: Nested Schemas
 
 ```typescript
-import { Type, useSchema } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
 
-// Base schema
-export const OutputProjectTeamMemberItemSchema = Type.Object({
-  userId: Type.String(),
-  email: Type.String(),
-  role: Type.String()
-}, {
-  $id: "OutputProjectTeamMemberItemSchema"
-});
+// ✅ STEP 1: Register base schema FIRST
+export const OutputProjectTeamMemberItemSchema = addSchema(
+  Type.Object({
+    userId: Type.String(),
+    email: Type.String(),
+    role: Type.String()
+  }, {
+    $id: 'OutputProjectTeamMemberItemSchema'
+  })
+);
 
-// List schema using useSchema()
-export const OutputProjectTeamSchema = Type.Object({
-  members: Type.Array(useSchema(OutputProjectTeamMemberItemSchema))
-}, {
-  $id: "OutputProjectTeamSchema"
-});
+// ✅ STEP 2: Register dependent schema AFTER
+export const OutputProjectTeamSchema = addSchema(
+  Type.Object({
+    members: Type.Array(Type.Ref('OutputProjectTeamMemberItemSchema')) // ✅ Use Type.Ref()
+  }, {
+    $id: 'OutputProjectTeamSchema'
+  })
+);
 
-// Complex nested schema
-export const OutputProjectWithTeamSchema = Type.Object({
-  project: useSchema(OutputProjectSchema),
-  team: useSchema(OutputProjectTeamSchema)
-}, {
-  $id: "OutputProjectWithTeamSchema"
-});
+// ✅ STEP 3: Register complex nested schema AFTER dependencies
+export const OutputProjectWithTeamSchema = addSchema(
+  Type.Object({
+    project: Type.Ref('OutputProjectSchema'), // From generated schemas
+    team: Type.Ref('OutputProjectTeamSchema')
+  }, {
+    $id: 'OutputProjectWithTeamSchema'
+  })
+);
 ```
 
 ### Example 2: Generated Schemas
 
 ```typescript
-import { Type, useSchema } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 import { 
   OutputUserSchema, 
   OutputProjectSchema,
   OutputAssetSchema 
 } from '@generated/typebox-schemas/models/index.js';
 
-export const OutputUserDashboardSchema = Type.Object({
-  user: useSchema(OutputUserSchema),
-  projects: Type.Array(useSchema(OutputProjectSchema)),
-  avatar: useSchema(OutputAssetSchema)
-}, {
-  $id: "OutputUserDashboardSchema"
-});
+// ✅ Register generated schemas first
+export const OutputUserSchemaRegistered = addSchema(OutputUserSchema);
+export const OutputProjectSchemaRegistered = addSchema(OutputProjectSchema);
+export const OutputAssetSchemaRegistered = addSchema(OutputAssetSchema);
+
+// ✅ Register dependent schema after
+export const OutputUserDashboardSchema = addSchema(
+  Type.Object({
+    user: Type.Ref('OutputUserSchema'),
+    projects: Type.Array(Type.Ref('OutputProjectSchema')),
+    avatar: Type.Ref('OutputAssetSchema')
+  }, {
+    $id: 'OutputUserDashboardSchema'
+  })
+);
 ```
 
-### Example 3: Custom Schemas
+### Example 3: Custom Schemas with refSchema()
 
 ```typescript
-import { Type, useSchema } from '@tsdiapi/server';
+import { addSchema, refSchema, Type } from '@tsdiapi/server';
 
-// Custom base schema
-export const OutputFileMetadataSchema = Type.Object({
-  filename: Type.String(),
-  size: Type.Number(),
-  mimeType: Type.String()
-}, {
-  $id: "OutputFileMetadataSchema"
-});
+// ✅ STEP 1: Register base schema FIRST
+export const OutputFileMetadataSchema = addSchema(
+  Type.Object({
+    filename: Type.String(),
+    size: Type.Number(),
+    mimeType: Type.String()
+  }, {
+    $id: 'OutputFileMetadataSchema'
+  })
+);
 
-// Schema using custom base
-export const OutputFileWithMetadataSchema = Type.Object({
-  url: Type.String(),
-  metadata: useSchema(OutputFileMetadataSchema)
-}, {
-  $id: "OutputFileWithMetadataSchema"
-});
+// ✅ STEP 2: Register dependent schema AFTER (using refSchema())
+export const OutputFileWithMetadataSchema = addSchema(
+  Type.Object({
+    url: Type.String(),
+    metadata: refSchema<typeof OutputFileMetadataSchema>('OutputFileMetadataSchema') // ✅ Use refSchema()
+  }, {
+    $id: 'OutputFileWithMetadataSchema'
+  })
+);
 ```
 
 ## Error Handling
@@ -141,128 +198,159 @@ export const OutputFileWithMetadataSchema = Type.Object({
 ```typescript
 // ❌ Error at runtime
 const schemaWithoutId = Type.Object({ name: Type.String() });
-useSchema(schemaWithoutId); // Error: useSchema() requires a schema with $id property
+addSchema(schemaWithoutId); // Error: Schema must have $id property
 
 // ✅ Correct
-const schemaWithId = Type.Object({ name: Type.String() }, { $id: 'MySchema' });
-useSchema(schemaWithId); // Works!
+const schemaWithId = addSchema(
+  Type.Object({ name: Type.String() }, { $id: 'MySchema' })
+);
 ```
 
-### Type Safety
+### Wrong Registration Order
 
 ```typescript
-// ❌ TypeScript error - schema doesn't exist
-useSchema(NonExistentSchema); // Compile error
+// ❌ Error - ItemSchema not registered yet
+export const ListSchema = addSchema(
+  Type.Object({
+    items: Type.Array(Type.Ref('ItemSchema')) // Error: Schema "ItemSchema" not found
+  }, { $id: 'ListSchema' })
+);
 
-// ✅ TypeScript validates schema exists
-import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
-useSchema(OutputProjectSchema); // Works!
+// ✅ Fix - Register ItemSchema first
+export const ItemSchema = addSchema(
+  Type.Object({ id: Type.String() }, { $id: 'ItemSchema' })
+);
+
+export const ListSchema = addSchema(
+  Type.Object({
+    items: Type.Array(Type.Ref('ItemSchema')) // ✅ Works
+  }, { $id: 'ListSchema' })
+);
 ```
 
-## Comparison: useSchema() vs Type.useSchema()
+## Comparison: Type.Ref() vs refSchema()
 
-| Feature | `useSchema(schema)` | `Type.useSchema('id')` |
-|---------|---------------|------------------|
-| Type safety | ✅ Compile-time | ❌ Runtime only |
-| Auto-extract $id | ✅ Yes | ❌ Manual |
-| IDE autocomplete | ✅ Yes | ❌ No |
-| Refactoring safe | ✅ Yes | ❌ No |
+| Feature | `Type.Ref('id')` | `refSchema<typeof Schema>('id')` |
+|---------|------------------|----------------------------------|
+| Type safety | ❌ Runtime only | ✅ Compile-time |
+| Auto-extract $id | ❌ Manual | ❌ Manual (but type-safe) |
+| IDE autocomplete | ❌ No | ✅ Yes |
+| Refactoring safe | ❌ No | ✅ Yes |
 | Works with imports | ✅ Yes | ✅ Yes |
-| Works with strings | ❌ No | ✅ Yes |
+| Works with strings | ✅ Yes | ✅ Yes |
+| Simplicity | ✅ Simple | ⚠️ More verbose |
 
 ## When to Use Each
 
-### Use `useSchema(schema)` when:
-- ✅ You have the schema object imported
-- ✅ You want type safety and IDE support
+### Use `Type.Ref('SchemaId')` when:
+- ✅ You want simplicity
+- ✅ You know the schema ID string
 - ✅ You're working with generated schemas
-- ✅ You want to avoid typos
+- ✅ You don't need compile-time validation
 
-### Use `Type.useSchema('id')` when:
-- ✅ You only know the schema ID string
-- ✅ Schema is registered dynamically
-- ✅ You're referencing schemas from other modules without imports
+### Use `refSchema<typeof Schema>('SchemaId')` when:
+- ✅ You want type safety
+- ✅ You have the schema object imported
+- ✅ You want IDE autocomplete
+- ✅ You want refactoring safety
 
 ## Migration Guide
 
-### Step 1: Import Ref
+### Step 1: Import refSchema (if using)
 
 ```typescript
-// Add Ref to imports
-import { Type, useSchema } from '@tsdiapi/server';
+// Add refSchema to imports
+import { addSchema, refSchema, Type } from '@tsdiapi/server';
 ```
 
-### Step 2: Replace Type.useSchema() calls
+### Step 2: Replace useSchema() calls (if any)
 
 ```typescript
-// Before
-Type.useSchema('OutputProjectSchema')
-
-// After
+// ❌ useSchema() doesn't exist
 useSchema(OutputProjectSchema)
+
+// ✅ Use Type.Ref() or refSchema()
+Type.Ref('OutputProjectSchema')
+// OR
+refSchema<typeof OutputProjectSchema>('OutputProjectSchema')
 ```
 
-### Step 3: Ensure schema is imported
+### Step 3: Ensure correct registration order
 
 ```typescript
-// Make sure schema is imported
-import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
+// ✅ Register base schema first
+export const ItemSchema = addSchema(...);
+
+// ✅ Register dependent schema after
+export const ListSchema = addSchema(
+  Type.Object({
+    items: Type.Array(Type.Ref('ItemSchema'))
+  }, { $id: 'ListSchema' })
+);
 ```
 
 ## Complete Example
 
 ```typescript
 // project.schemas.ts
-import { Type, useSchema } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
 
-// Base schemas
-export const OutputProjectTeamMemberItemSchema = Type.Object({
-  userId: Type.String(),
-  email: Type.String(),
-  role: Type.String()
-}, {
-  $id: "OutputProjectTeamMemberItemSchema"
-});
+// ✅ STEP 1: Register base schemas FIRST
+export const OutputProjectTeamMemberItemSchema = addSchema(
+  Type.Object({
+    userId: Type.String(),
+    email: Type.String(),
+    role: Type.String()
+  }, {
+    $id: 'OutputProjectTeamMemberItemSchema'
+  })
+);
 
-export const OutputProjectFileItemSchema = Type.Object({
-  fileId: Type.String(),
-  url: Type.String()
-}, {
-  $id: "OutputProjectFileItemSchema"
-});
+export const OutputProjectFileItemSchema = addSchema(
+  Type.Object({
+    fileId: Type.String(),
+    url: Type.String()
+  }, {
+    $id: 'OutputProjectFileItemSchema'
+  })
+);
 
-// Composite schemas using useSchema()
-export const OutputProjectTeamSchema = Type.Object({
-  members: Type.Array(useSchema(OutputProjectTeamMemberItemSchema))
-}, {
-  $id: "OutputProjectTeamSchema"
-});
+// ✅ STEP 2: Register dependent schemas AFTER
+export const OutputProjectTeamSchema = addSchema(
+  Type.Object({
+    members: Type.Array(Type.Ref('OutputProjectTeamMemberItemSchema')) // ✅ Use Type.Ref()
+  }, {
+    $id: 'OutputProjectTeamSchema'
+  })
+);
 
-export const OutputProjectFilesSchema = Type.Object({
-  files: Type.Array(useSchema(OutputProjectFileItemSchema))
-}, {
-  $id: "OutputProjectFilesSchema"
-});
+export const OutputProjectFilesSchema = addSchema(
+  Type.Object({
+    files: Type.Array(Type.Ref('OutputProjectFileItemSchema')) // ✅ Use Type.Ref()
+  }, {
+    $id: 'OutputProjectFilesSchema'
+  })
+);
 
-// Complex nested schema
-export const OutputProjectDetailsSchema = Type.Object({
-  project: useSchema(OutputProjectSchema),
-  team: useSchema(OutputProjectTeamSchema),
-  files: useSchema(OutputProjectFilesSchema)
-}, {
-  $id: "OutputProjectDetailsSchema"
-});
+// ✅ STEP 3: Register complex nested schema AFTER all dependencies
+export const OutputProjectDetailsSchema = addSchema(
+  Type.Object({
+    project: Type.Ref('OutputProjectSchema'),
+    team: Type.Ref('OutputProjectTeamSchema'),
+    files: Type.Ref('OutputProjectFilesSchema')
+  }, {
+    $id: 'OutputProjectDetailsSchema'
+  })
+);
 ```
 
 ## Summary
 
-The `useSchema()` helper function:
-- ✅ Eliminates manual string IDs
-- ✅ Provides type safety
-- ✅ Improves developer experience
-- ✅ Prevents runtime errors
-- ✅ Works seamlessly with the schema registry
+- ✅ **Use `Type.Ref('SchemaId')`** for simple, straightforward references
+- ✅ **Use `refSchema<typeof Schema>('SchemaId')`** when you need type safety
+- ✅ **Register base schemas FIRST** before dependent schemas
+- ✅ **Both create `Type.Ref()`** - choose based on your needs
+- ✅ **Order matters!** - Dependencies must be registered first
 
-Use `useSchema()` whenever you have the schema object available - it's the recommended approach for type-safe schema references!
-
+The key is ensuring correct registration order - base schemas before dependent schemas!

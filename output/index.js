@@ -23,8 +23,7 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
 import { getSyncQueueProvider } from "@tsdiapi/syncqueue";
 import { createRequestContextHook, createRequestContextCleanupHook } from './request-context.js';
-import { autoRegisterSchemas, getSchemaRegistry } from './schema-registry.js';
-import { ResponseErrorSchema } from './response.js';
+import { autoRegisterSchemas, initializeSchemaRegistry, flushSchemas } from './schema-registry.js';
 // Package version - exported for API versioning
 export const VERSION = '0.3.5';
 export const API_VERSION = 'v1';
@@ -34,7 +33,7 @@ export * from './meta.js';
 export * from './response.js';
 export * from './request-context.js';
 export * from './schema-registry.js';
-export { useSchema } from './schema-registry.js';
+export { addSchema, refSchema } from './schema-registry.js';
 let context = null;
 export function getContext() {
     return context;
@@ -93,17 +92,6 @@ export async function createApp(options = {}) {
         setContext(context);
         if (options.fileLoader) {
             context.fileLoader = options.fileLoader;
-        }
-        // Initialize schema registry and register framework schemas
-        try {
-            const registry = getSchemaRegistry(fastify);
-            if (!registry.isRegistered('ResponseErrorSchema')) {
-                registry.register(ResponseErrorSchema);
-                registry.resolveAndRegister();
-            }
-        }
-        catch {
-            // If registry not available, schema will be registered when used via withRef()
         }
         const pendingBuilds = [];
         function useRoute(controller) {
@@ -201,11 +189,17 @@ export async function createApp(options = {}) {
         const apiDir = path.join(context.appDir, options.apiDir || 'api');
         const apiRelativePath = removeTrailingSlash(path.relative(context.appDir, apiDir));
         await ensureDir(apiDir);
+        // Initialize schema registry (overrides fastify.addSchema)
+        initializeSchemaRegistry(fastify, {
+            logDuplicateSchemas: options.logDuplicateSchemas ?? false
+        });
         // Auto-register schemas only if legacy option is enabled
-        // By default, only explicitly registered schemas (via useSchema()) are used
+        // By default, only explicitly registered schemas (via addSchema()) are used
         if (options.legacyAutoSchemaRegistration === true) {
             console.log(cristal('⚠️  Legacy auto schema registration is enabled'));
-            await autoRegisterSchemas(fastify, apiDir);
+            await autoRegisterSchemas(fastify, apiDir, {
+                logDuplicateSchemas: options.logDuplicateSchemas ?? false
+            });
         }
         await fileLoader(makeLoadPath(apiRelativePath, 'service'), context.appDir);
         fastify.get("/404", function (_, res) {
@@ -303,6 +297,10 @@ export async function createApp(options = {}) {
             await fileLoader(makeLoadPath(apiRelativePath, extdi), context.appDir, true);
             await fileLoaderWithContext(makeLoadPath("", ext), context, context.appDir);
         }
+        // Flush all pending schemas to Fastify after loading all modules and controllers
+        // This ensures all schemas are registered before server starts
+        // After this point, any new schemas will be registered immediately
+        flushSchemas();
         if (options?.plugins && options.plugins.length > 0) {
             for (const plugin of options.plugins) {
                 if (plugin.beforeStart) {

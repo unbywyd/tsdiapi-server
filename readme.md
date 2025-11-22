@@ -68,14 +68,22 @@ Define routes using `useRoute()` inside a controller:
 
 ### Basic Route Example
 ```ts
-import { AppContext } from "@tsdiapi/server";
-import { Type } from "@sinclair/typebox";
+import { AppContext, addSchema, Type } from "@tsdiapi/server";
+
+// ✅ Register schemas with addSchema() - REQUIRED!
+const UserParamsSchema = addSchema(
+  Type.Object({ id: Type.String() }, { $id: 'UserParamsSchema' })
+);
+
+const UserResponseSchema = addSchema(
+  Type.Object({ id: Type.String(), name: Type.String() }, { $id: 'UserResponseSchema' })
+);
 
 export default function userController({ useRoute }: AppContext) {
   useRoute()
     .get("/users/:id")
-    .params(Type.Object({ id: Type.String() }))
-    .code(200, Type.Object({ id: Type.String(), name: Type.String() }))
+    .params(UserParamsSchema)
+    .code(200, UserResponseSchema)
     .handler(async (req) => {
       return {
         status: 200,
@@ -88,20 +96,39 @@ export default function userController({ useRoute }: AppContext) {
 
 ### Complete CRUD Example
 ```ts
+import { AppContext, addSchema, Type } from "@tsdiapi/server";
+
+// ✅ Register schemas with addSchema() - REQUIRED!
+const CreateUserBodySchema = addSchema(
+  Type.Object({
+    name: Type.String(),
+    email: Type.String({ format: "email" }),
+    age: Type.Number({ minimum: 0 })
+  }, { $id: 'CreateUserBodySchema' })
+);
+
+const UserResponseSchema = addSchema(
+  Type.Object({
+    id: Type.String(),
+    name: Type.String(),
+    email: Type.String()
+  }, { $id: 'UserResponseSchema' })
+);
+
+const UserParamsSchema = addSchema(
+  Type.Object({ id: Type.String() }, { $id: 'UserParamsSchema' })
+);
+
+const ErrorResponseSchema = addSchema(
+  Type.Object({ error: Type.String() }, { $id: 'ErrorResponseSchema' })
+);
+
 export default function userController({ useRoute }: AppContext) {
   // Create user
   useRoute()
     .post("/users")
-    .body(Type.Object({
-      name: Type.String(),
-      email: Type.String({ format: "email" }),
-      age: Type.Number({ minimum: 0 })
-    }))
-    .code(201, Type.Object({
-      id: Type.String(),
-      name: Type.String(),
-      email: Type.String()
-    }))
+    .body(CreateUserBodySchema)
+    .code(201, UserResponseSchema)
     .handler(async (req) => {
       const user = await createUser(req.body);
       return { status: 201, data: user };
@@ -111,15 +138,9 @@ export default function userController({ useRoute }: AppContext) {
   // Get user
   useRoute()
     .get("/users/:id")
-    .params(Type.Object({ id: Type.String() }))
-    .code(200, Type.Object({
-      id: Type.String(),
-      name: Type.String(),
-      email: Type.String()
-    }))
-    .code(404, Type.Object({
-      error: Type.String()
-    }))
+    .params(UserParamsSchema)
+    .code(200, UserResponseSchema)
+    .code(404, ErrorResponseSchema)
     .handler(async (req) => {
       const user = await getUser(req.params.id);
       if (!user) {

@@ -18,24 +18,25 @@ Without `$id`, the system cannot:
 
 ## How to Provide $id
 
-### Option 1: Use useSchema() (Recommended)
+### Option 1: Use addSchema() (Required)
 
 ```typescript
-import { useSchema, Type } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 
-// Register schema with $id
-export const InputCreateProjectSchema = useSchema(
+// Register schema with $id - REQUIRED!
+export const InputCreateProjectSchema = addSchema(
   Type.Object({
     name: Type.String(),
     email: Type.String()
-  }),
-  'InputCreateProjectSchema' // ✅ Auto-generates $id
+  }, {
+    $id: 'InputCreateProjectSchema' // ✅ Explicit $id
+  })
 );
 
 // Use in route
 useRoute('project')
   .post('/')
-  .body(InputCreateProjectSchema) // ✅ Works - has $id
+  .body(InputCreateProjectSchema) // ✅ Works - has $id and is registered
   .build();
 ```
 
@@ -92,22 +93,24 @@ useRoute('project')
 
 ```typescript
 // project.schemas.ts
-import { registerSchema, Type } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 
-export const InputCreateProjectSchema = registerSchema(
+export const InputCreateProjectSchema = addSchema(
   Type.Object({
     name: Type.String({ minLength: 1 }),
     description: Type.Optional(Type.String())
-  }),
-  'InputCreateProjectSchema'
+  }, {
+    $id: 'InputCreateProjectSchema'
+  })
 );
 
-export const OutputProjectSchema = registerSchema(
+export const OutputProjectSchema = addSchema(
   Type.Object({
     id: Type.String(),
     name: Type.String()
-  }),
-  'OutputProjectSchema'
+  }, {
+    $id: 'OutputProjectSchema'
+  })
 );
 ```
 
@@ -143,7 +146,9 @@ useRoute('project')
 
 ```typescript
 // ✅ Always the same ID
-export const MySchema = registerSchema(Type.Object({...}), 'MySchema');
+export const MySchema = addSchema(
+  Type.Object({...}, { $id: 'MySchema' })
+);
 // $id: 'MySchema' - consistent across all uses
 ```
 
@@ -165,31 +170,32 @@ The system can track which schemas reference which:
 
 If you have schemas without `$id` used in routes:
 
-1. **Register them with useSchema()**:
+1. **Register them with addSchema()**:
    ```typescript
    // Before
    const MySchema = Type.Object({...});
    
    // After
-   export const MySchema = useSchema(
-     Type.Object({...}),
-     'MySchema'
+   export const MySchema = addSchema(
+     Type.Object({...}, { $id: 'MySchema' })
    );
    ```
 
-2. **Or add $id directly**:
+2. **Or add $id directly and register**:
    ```typescript
    // Before
    const MySchema = Type.Object({...});
    
    // After
-   const MySchema = Type.Object({...}, { $id: 'MySchema' });
+   const MySchema = addSchema(
+     Type.Object({...}, { $id: 'MySchema' })
+   );
    ```
 
 ## Summary
 
-- ✅ **Always use `useSchema()`** for schemas used in routes
-- ✅ **Or add `$id` directly** to schema definition
+- ✅ **Always use `addSchema()`** to register schemas used in routes - **REQUIRED**
+- ✅ **All schemas must have `$id`** property
 - ❌ **Never use schemas without `$id`** in route definitions
 - ✅ **Error messages guide you** to the solution
 

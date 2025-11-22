@@ -23,6 +23,96 @@ function groupFilesByFieldname(files) {
 export function trimSlashes(input) {
     return input.replace(/^[/\\]+|[/\\]+$/g, '');
 }
+/**
+ * Convert kebab-case or snake_case to PascalCase
+ * Examples: app-role -> AppRole, api_route -> ApiRoute, access-guard -> AccessGuard
+ */
+function toPascalCase(str) {
+    return str
+        .split(/[-_]/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join('');
+}
+/**
+ * Remove duplicate entity name and fix common issues in operationId
+ * Examples:
+ * - controller: "AppRole", operationId: "deleteAppRole" -> "Delete"
+ * - controller: "ApiRoute", operationId: "detachRoleFromRouteFromRoute" -> "DetachRoleFromRoute" (remove duplicate)
+ */
+function normalizeOperationId(controller, operationId) {
+    const normalizedController = toPascalCase(controller).toLowerCase();
+    let normalizedOperationId = operationId;
+    // Remove duplicate "FromRoute" or similar patterns at the end
+    normalizedOperationId = normalizedOperationId.replace(/FromRouteFromRoute$/i, 'FromRoute');
+    normalizedOperationId = normalizedOperationId.replace(/ToRouteToRoute$/i, 'ToRoute');
+    // Convert to lowercase for comparison
+    const lowerOperationId = normalizedOperationId.toLowerCase();
+    // Check if operationId starts with controller name
+    if (lowerOperationId.startsWith(normalizedController)) {
+        // Remove controller prefix from operationId
+        const remaining = normalizedOperationId.slice(normalizedController.length);
+        // Capitalize first letter
+        return remaining.charAt(0).toUpperCase() + remaining.slice(1);
+    }
+    // Check for common patterns like "deleteAppRole" where controller is "AppRole"
+    // Split controller into words (AppRole -> ["app", "role"])
+    const controllerWords = normalizedController.split(/(?=[A-Z])/).map(w => w.toLowerCase()).filter(w => w.length > 0);
+    // Check if operationId ends with controller words
+    for (const word of controllerWords) {
+        if (lowerOperationId.endsWith(word) && lowerOperationId.length > word.length) {
+            // Remove trailing entity name
+            const beforeEntity = normalizedOperationId.slice(0, -word.length);
+            // Capitalize first letter
+            return beforeEntity.charAt(0).toUpperCase() + beforeEntity.slice(1);
+        }
+    }
+    // No duplicate found, return capitalized operationId
+    return normalizedOperationId.charAt(0).toUpperCase() + normalizedOperationId.slice(1);
+}
+/**
+ * Generate a consistent response wrapper schema name
+ * Format: {Controller}{OperationId}Response{StatusCode}
+ * Falls back to {SchemaId}Response{StatusCode} if operationId is not available
+ * For standard error schema (ResponseErrorSchema), uses common response type names
+ */
+function generateResponseWrapperName(controller, operationId, schemaId, statusCode) {
+    // Convert status code to string (e.g., 200 -> "200")
+    const statusCodeStr = statusCode.toString();
+    // For ResponseErrorSchema, use standard response type names
+    // This avoids creating hundreds of duplicate types for the same error structure
+    if (schemaId === 'ResponseErrorSchema') {
+        const standardNames = {
+            400: 'ResponseBadRequest',
+            401: 'ResponseUnauthorized',
+            403: 'ResponseForbidden',
+            404: 'ResponseNotFound',
+            409: 'ResponseConflict',
+            422: 'ResponseUnprocessableEntity',
+            429: 'ResponseTooManyRequests',
+            500: 'ResponseInternalServerError',
+            503: 'ResponseServiceUnavailable'
+        };
+        // Use standard name if available, otherwise fall back to generic pattern
+        return standardNames[statusCode] || `ResponseError${statusCodeStr}`;
+    }
+    // For custom schemas, use endpoint-specific names to avoid conflicts
+    // If we have operationId, use controller + operationId
+    if (operationId) {
+        // If controller is available, use it as prefix
+        if (controller) {
+            // Convert controller to PascalCase (app-role -> AppRole)
+            const normalizedController = toPascalCase(controller);
+            // Normalize operationId (remove duplicates, fix naming)
+            const normalizedOperationId = normalizeOperationId(controller, operationId);
+            return `${normalizedController}${normalizedOperationId}Response${statusCodeStr}`;
+        }
+        // Fallback to just operationId (capitalized)
+        const capitalizedOperationId = operationId.charAt(0).toUpperCase() + operationId.slice(1);
+        return `${capitalizedOperationId}Response${statusCodeStr}`;
+    }
+    // Fallback to schemaId if no operationId
+    return `${schemaId}Response${statusCodeStr}`;
+}
 export class RouteBuilder {
     appContext;
     extraMetaStorage = new MetaSchemaStorage();
@@ -247,8 +337,7 @@ export class RouteBuilder {
     }
     auth(type = "bearer", guard) {
         if (!this.config.schema.headers) {
-            const emptyHeadersSchema = Type.Object({}, { $id: 'EmptyHeaders' });
-            this.config.schema.headers = this.withRef(emptyHeadersSchema);
+            this.config.schema.headers = Type.Object({});
         }
         if (guard) {
             this.guard(guard);
@@ -316,8 +405,9 @@ export class RouteBuilder {
                 `Context: ${contextInfo}\n` +
                 `Schema: ${schemaInfo}\n\n` +
                 `Solution:\n` +
-                `1. Use useSchema() to register schema with $id:\n` +
-                `   export const MySchema = useSchema(Type.Object({...}), 'MySchema');\n\n` +
+                `1. Use addSchema() to register schema with $id:\n` +
+                `   const MySchema = Type.Object({...}, { $id: 'MySchema' });\n` +
+                `   addSchema(MySchema);\n\n` +
                 `2. Or add $id directly:\n` +
                 `   Type.Object({...}, { $id: 'MySchema' })\n\n` +
                 `3. Then use in route:\n` +
@@ -386,14 +476,20 @@ export class RouteBuilder {
         return this;
     }
     code(code, schema) {
-        if (code === 204) {
-            return this.codes({ [code]: Type.Object({}, { $id: 'EmptyResponse204' }) });
-        }
         return this.codes({ [code]: schema });
     }
     codes(responses) {
         for (const [code, schema] of Object.entries(responses)) {
             const statusCode = Number(code);
+            // For 204 No Content, don't create response schema according to HTTP/OpenAPI standard
+            // 204 responses should not have a response body schema in Swagger
+            if (statusCode === 204) {
+                // Don't set any response schema for 204 - OpenAPI/Swagger will correctly
+                // interpret this as "no content" response
+                // Don't add to extraMetaStorage - 204 doesn't need schema metadata
+                this.config.schema.response[statusCode] = Type.Any({ default: null });
+                continue;
+            }
             // Require $id for response schemas
             const validatedSchema = this.requireSchemaId(schema, {
                 type: 'response',
@@ -406,13 +502,15 @@ export class RouteBuilder {
                 schema: validatedSchema,
                 id: validatedSchema.$id
             });
-            const responseWrapperSchema = Type.Object({
+            // Create wrapper schema with $id using consistent naming convention
+            // Format: {Controller}{OperationId}Response{StatusCode} or {SchemaId}Response{StatusCode}
+            const wrapperSchemaId = generateResponseWrapperName(this.config.controller, this.config.operationId, validatedSchema.$id, statusCode);
+            const wrapperSchema = Type.Object({
                 status: Type.Literal(statusCode),
                 data: this.withRef(validatedSchema)
-            }, {
-                $id: `RouteResponse_${this.config.method}_${statusCode}_${validatedSchema.$id}`
-            });
-            this.config.schema.response[statusCode] = this.withRef(responseWrapperSchema);
+            }, { $id: wrapperSchemaId });
+            // Register wrapper schema
+            this.config.schema.response[statusCode] = this.withRef(wrapperSchema);
         }
         return this;
     }
@@ -426,6 +524,11 @@ export class RouteBuilder {
                 if (result === true || result === undefined)
                     return true;
                 if ((typeof result === "object") && ("status" in result) && ("data" in result)) {
+                    // For 204 No Content, don't send response body according to HTTP standard
+                    if (result.status === 204) {
+                        reply.code(204).send();
+                        return false;
+                    }
                     reply.code(result.status).send(result);
                     return false;
                 }
@@ -433,10 +536,20 @@ export class RouteBuilder {
             }
             catch (error) {
                 if (error instanceof ResponseError) {
+                    // 204 is not typically an error status, but handle it properly if needed
+                    if (error.status === 204) {
+                        reply.code(204).send();
+                        return false;
+                    }
                     reply.code(error.status).send(error);
                     return false;
                 }
                 if ("status" in error && "data" in error) {
+                    // For 204 No Content, don't send response body according to HTTP standard
+                    if (error.status === 204) {
+                        reply.code(204).send();
+                        return false;
+                    }
                     reply.code(error.status).send(error);
                     return false;
                 }
@@ -549,10 +662,20 @@ export class RouteBuilder {
                 try {
                     const result = await resolver(req, reply);
                     if (result instanceof ResponseError) {
+                        // For 204 No Content, don't send response body according to HTTP standard
+                        if (result.status === 204) {
+                            reply.code(204).send();
+                            return false;
+                        }
                         reply.code(result.status).send(result);
                         return false;
                     }
                     if ((typeof result === "object") && ("status" in result) && ("data" in result)) {
+                        // For 204 No Content, don't send response body according to HTTP standard
+                        if (result.status === 204) {
+                            reply.code(204).send();
+                            return false;
+                        }
                         reply.code(result.status).send({
                             status: result.status,
                             data: result.data
@@ -563,6 +686,11 @@ export class RouteBuilder {
                 }
                 catch (error) {
                     if (error instanceof ResponseError) {
+                        // 204 is not typically an error status, but handle it properly if needed
+                        if (error.status === 204) {
+                            reply.code(204).send();
+                            return false;
+                        }
                         reply.code(error.status).send(error);
                         return false;
                     }
@@ -763,11 +891,19 @@ export class RouteBuilder {
                     try {
                         const result = await handler.call(this, req, reply);
                         if (result instanceof ResponseError) {
+                            // For 204 No Content, don't send response body according to HTTP standard
+                            if (result.status === 204) {
+                                return reply.code(204).send();
+                            }
                             return reply.code(result.status).send(result);
                         }
                         if (result &&
                             typeof result === 'object' &&
                             'status' in result) {
+                            // For 204 No Content, don't send response body according to HTTP standard
+                            if (result.status === 204) {
+                                return reply.code(204).send();
+                            }
                             return reply.code(result.status).send(result);
                         }
                         reply.type(this.config.responseType || 'text/html');
@@ -775,9 +911,17 @@ export class RouteBuilder {
                     }
                     catch (error) {
                         if (error instanceof ResponseError) {
+                            // 204 is not typically an error status, but handle it properly if needed
+                            if (error.status === 204) {
+                                return reply.code(204).send();
+                            }
                             return reply.code(error.status).send(error);
                         }
                         if ("status" in error && "data" in error) {
+                            // For 204 No Content, don't send response body according to HTTP standard
+                            if (error.status === 204) {
+                                return reply.code(204).send();
+                            }
                             return reply.code(error.status).send({
                                 status: error.status,
                                 data: error.data

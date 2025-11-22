@@ -2,13 +2,14 @@
 
 ## Overview
 
-By default, **automatic schema registration is disabled**. Only schemas explicitly registered via `useSchema()` are registered.
+By default, **automatic schema registration is disabled**. Only schemas explicitly registered via `addSchema()` are registered.
 
 This ensures:
 - ✅ **Explicit control** - You know exactly which schemas are registered
 - ✅ **Better performance** - No unnecessary file scanning
 - ✅ **Clearer code** - All schema registrations are visible in code
 - ✅ **Type safety** - TypeScript ensures schemas are properly imported
+- ✅ **Order matters!** - Dependencies must be registered first
 
 ## Default Behavior (Recommended)
 
@@ -20,12 +21,11 @@ const app = await createApp({
   // legacyAutoSchemaRegistration: false (default)
 });
 
-// Only schemas registered via useSchema() are available
-import { useSchema, Type } from '@tsdiapi/server';
+// Only schemas registered via addSchema() are available
+import { addSchema, Type } from '@tsdiapi/server';
 
-export const MySchema = useSchema(
-  Type.Object({ name: Type.String() }),
-  'MySchema'
+export const MySchema = addSchema(
+  Type.Object({ name: Type.String() }, { $id: 'MySchema' })
 );
 ```
 
@@ -63,9 +63,9 @@ export const OutputProjectSchema = Type.Object({
 });
 ```
 
-### Step 2: Register Explicitly with useSchema()
+### Step 2: Register Explicitly with addSchema()
 
-Replace manual `$id` definitions with `useSchema()`:
+Register schemas with `addSchema()`:
 
 ```typescript
 // Before (legacy mode)
@@ -77,14 +77,15 @@ export const OutputProjectSchema = Type.Object({
 });
 
 // After (recommended)
-import { useSchema, Type } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 
-export const OutputProjectSchema = useSchema(
+export const OutputProjectSchema = addSchema(
   Type.Object({
     id: Type.String(),
     name: Type.String()
-  }),
-  'OutputProjectSchema' // ✅ Explicit registration
+  }, {
+    $id: 'OutputProjectSchema' // ✅ Explicit registration
+  })
 );
 ```
 
@@ -116,7 +117,9 @@ const app = await createApp({
 
 ```typescript
 // ✅ Clear - you see exactly what's registered
-export const MySchema = useSchema(Type.Object({...}), 'MySchema');
+export const MySchema = addSchema(
+  Type.Object({...}, { $id: 'MySchema' })
+);
 
 // ❌ Unclear - where is this schema registered?
 export const MySchema = Type.Object({...}, { $id: 'MySchema' });
@@ -159,8 +162,9 @@ Use legacy mode only if:
 
 - **Default**: Auto-registration is **OFF** ✅
 - **Legacy mode**: Enable with `legacyAutoSchemaRegistration: true` ⚠️
-- **Recommended**: Use `useSchema()` for explicit registration ✅
-- **Migration**: Replace manual `$id` with `useSchema()` calls
+- **Recommended**: Use `addSchema()` for explicit registration ✅
+- **Order matters!** - Register base schemas before dependent schemas
+- **Migration**: Register schemas with `addSchema()` and ensure correct order
 
 Explicit is better than implicit!
 

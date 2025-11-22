@@ -3,9 +3,10 @@
 ## Overview
 
 This guide helps you migrate your project to the new schema registration system. The new system provides:
-- ✅ Explicit schema registration via `useSchema()`
+- ✅ Explicit schema registration via `addSchema()` - **REQUIRED**
+- ✅ **Order of registration matters!** - Dependencies must be registered first
 - ✅ No automatic schema scanning by default (better performance)
-- ✅ Unified API for registration and references
+- ✅ Use `Type.Ref()` or `refSchema()` for schema references
 - ✅ Better error messages with schema details
 
 ## Breaking Changes
@@ -20,16 +21,17 @@ export const MySchema = Type.Object({...}, { $id: 'MySchema' });
 
 **After:**
 ```typescript
-// Must explicitly register schemas
-import { useSchema, Type } from '@tsdiapi/server';
+// Must explicitly register schemas with addSchema()
+import { addSchema, Type } from '@tsdiapi/server';
 
-export const MySchema = useSchema(
-  Type.Object({...}),
-  'MySchema'
+export const MySchema = addSchema(
+  Type.Object({...}, { $id: 'MySchema' })
 );
 ```
 
-### 2. Unified `useSchema()` Function
+### 2. Schema Registration is Required
+
+**⚠️ IMPORTANT: All schemas MUST be registered with `addSchema()` before use!**
 
 **Before:**
 ```typescript
@@ -46,17 +48,57 @@ const ListSchema = Type.Object({
 
 **After:**
 ```typescript
-import { useSchema, Type } from '@tsdiapi/server';
+import { addSchema, refSchema, Type } from '@tsdiapi/server';
 
-// Registration
-export const MySchema = useSchema(Type.Object({...}), 'MySchema');
+// Registration - REQUIRED!
+export const MySchema = addSchema(
+  Type.Object({...}, { $id: 'MySchema' })
+);
 
-// Reference (same function!)
-const ListSchema = useSchema(
+// Reference - use Type.Ref() or refSchema()
+const ListSchema = addSchema(
   Type.Object({
-    items: Type.Array(useSchema(MySchema)) // ✅ Creates Type.Ref()
-  }),
-  'ListSchema'
+    items: Type.Array(Type.Ref('MySchema')) // ✅ Use Type.Ref() with string ID
+    // OR
+    // items: Type.Array(refSchema<typeof MySchema>('MySchema')) // ✅ Use refSchema()
+  }, { $id: 'ListSchema' })
+);
+```
+
+### 3. Order of Registration Matters!
+
+**⚠️ CRITICAL: Dependencies must be registered BEFORE schemas that reference them!**
+
+```typescript
+import { addSchema, Type } from '@tsdiapi/server';
+
+// ✅ CORRECT ORDER - Base schema first
+export const ItemSchema = addSchema(
+  Type.Object({
+    id: Type.String(),
+    name: Type.String()
+  }, { $id: 'ItemSchema' })
+);
+
+// Then dependent schema
+export const ListSchema = addSchema(
+  Type.Object({
+    items: Type.Array(Type.Ref('ItemSchema')) // ✅ ItemSchema already registered
+  }, { $id: 'ListSchema' })
+);
+
+// ❌ WRONG ORDER - Will fail!
+export const ListSchema = addSchema(
+  Type.Object({
+    items: Type.Array(Type.Ref('ItemSchema')) // ❌ ItemSchema not registered yet!
+  }, { $id: 'ListSchema' })
+);
+
+export const ItemSchema = addSchema(
+  Type.Object({
+    id: Type.String(),
+    name: Type.String()
+  }, { $id: 'ItemSchema' })
 );
 ```
 
@@ -72,14 +114,15 @@ useRoute('project')
 
 **After:**
 ```typescript
-// Must use registered schemas
-const InputCreateProject = useSchema(
-  Type.Object({ name: Type.String() }),
-  'InputCreateProject'
+// Must register schemas with addSchema() first
+import { addSchema, Type } from '@tsdiapi/server';
+
+const InputCreateProject = addSchema(
+  Type.Object({ name: Type.String() }, { $id: 'InputCreateProject' })
 );
 
 useRoute('project')
-  .body(InputCreateProject) // ✅ Works
+  .body(InputCreateProject) // ✅ Works - schema is registered
   .build();
 ```
 
@@ -115,7 +158,7 @@ Example locations:
 
 ### Step 3: Migrate Schema Definitions
 
-For each schema file, replace manual `$id` definitions with `useSchema()`:
+For each schema file, register schemas with `addSchema()` and ensure correct order:
 
 #### Example 1: Simple Schema
 
@@ -136,19 +179,22 @@ export const OutputProjectSchema = Type.Object({
 **After:**
 ```typescript
 // project.schemas.ts
-import { useSchema, Type } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 
-export const OutputProjectSchema = useSchema(
+export const OutputProjectSchema = addSchema(
   Type.Object({
     id: Type.String(),
     name: Type.String(),
     description: Type.Optional(Type.String())
-  }),
-  'OutputProjectSchema'
+  }, {
+    $id: 'OutputProjectSchema'
+  })
 );
 ```
 
 #### Example 2: Schema with References
+
+**⚠️ IMPORTANT: Register base schemas FIRST, then dependent schemas!**
 
 **Before:**
 ```typescript
@@ -174,23 +220,27 @@ export const OutputProjectTeamSchema = Type.Object({
 **After:**
 ```typescript
 // project.schemas.ts
-import { useSchema, Type } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
 
-export const OutputProjectTeamMemberItemSchema = useSchema(
+// ✅ STEP 1: Register base schema FIRST
+export const OutputProjectTeamMemberItemSchema = addSchema(
   Type.Object({
     userId: Type.String(),
     email: Type.String(),
     role: Type.String()
-  }),
-  'OutputProjectTeamMemberItemSchema'
+  }, {
+    $id: 'OutputProjectTeamMemberItemSchema'
+  })
 );
 
-export const OutputProjectTeamSchema = useSchema(
+// ✅ STEP 2: Register dependent schema AFTER base schema
+export const OutputProjectTeamSchema = addSchema(
   Type.Object({
-    members: Type.Array(useSchema(OutputProjectTeamMemberItemSchema)) // ✅ Creates Type.Ref()
-  }),
-  'OutputProjectTeamSchema'
+    members: Type.Array(Type.Ref('OutputProjectTeamMemberItemSchema')) // ✅ Use Type.Ref() with string ID
+  }, {
+    $id: 'OutputProjectTeamSchema'
+  })
 );
 ```
 
@@ -212,14 +262,15 @@ export const InputCreateProjectSchema = Type.Object({
 **After:**
 ```typescript
 // project.schemas.ts
-import { useSchema, Type } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 
-export const InputCreateProjectSchema = useSchema(
+export const InputCreateProjectSchema = addSchema(
   Type.Object({
     name: Type.String({ minLength: 1, maxLength: 200 }),
     description: Type.Optional(Type.String({ maxLength: 5000 }))
-  }),
-  'InputCreateProjectSchema'
+  }, {
+    $id: 'InputCreateProjectSchema'
+  })
 );
 ```
 
@@ -253,7 +304,7 @@ import { InputCreateProjectSchema } from './project.schemas.js';
 export default function projectController({ useRoute }: AppContext) {
   useRoute('project')
     .post('/')
-    .body(InputCreateProjectSchema) // ✅ Has $id
+    .body(InputCreateProjectSchema) // ✅ Has $id and is registered
     .build();
 }
 ```
@@ -284,7 +335,7 @@ import { OutputProjectSchema } from './project.schemas.js';
 export default function projectController({ useRoute }: AppContext) {
   useRoute('project')
     .get('/:id')
-    .code(200, OutputProjectSchema) // ✅ Has $id
+    .code(200, OutputProjectSchema) // ✅ Has $id and is registered
     .build();
 }
 ```
@@ -302,41 +353,45 @@ import { registerSchema, Ref } from '@tsdiapi/server';
 **After:**
 ```typescript
 import { Type } from '@sinclair/typebox';
-import { useSchema } from '@tsdiapi/server';
+import { addSchema, refSchema } from '@tsdiapi/server';
 ```
 
 ### Step 6: Handle Generated Schemas
 
-If you have generated schemas (e.g., from Prisma), they might already have `$id`. You can use them directly:
+If you have generated schemas (e.g., from Prisma), they might already have `$id`. You must register them with `addSchema()`:
 
 ```typescript
 // Generated schemas already have $id
-import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
+import { addSchema, Type } from '@tsdiapi/server';
+import { OutputProjectSchema as GeneratedOutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
 
-// Use directly in routes
+// ✅ Register generated schema
+export const OutputProjectSchema = addSchema(GeneratedOutputProjectSchema);
+
+// Use in routes
 useRoute('project')
-  .code(200, OutputProjectSchema) // ✅ Works if it has $id
+  .code(200, OutputProjectSchema) // ✅ Works - schema is registered
   .build();
 
-// Or use in nested schemas
-const ListSchema = useSchema(
+// Or use in nested schemas - register base schema FIRST!
+export const ListSchema = addSchema(
   Type.Object({
-    items: Type.Array(useSchema(OutputProjectSchema)) // ✅ Creates Type.Ref()
-  }),
-  'ListSchema'
+    items: Type.Array(Type.Ref('OutputProjectSchema')) // ✅ Use Type.Ref() with string ID
+  }, { $id: 'ListSchema' })
 );
 ```
 
-If generated schemas don't have `$id`, wrap them:
+If generated schemas don't have `$id`, add it:
 
 ```typescript
-import { useSchema } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 import { ProjectSchema as GeneratedProjectSchema } from '@generated/typebox-schemas/models/index.js';
 
-// Wrap with useSchema to add $id
-export const OutputProjectSchema = useSchema(
-  GeneratedProjectSchema,
-  'OutputProjectSchema'
+// Add $id and register
+export const OutputProjectSchema = addSchema(
+  Type.Object({
+    ...GeneratedProjectSchema.properties
+  }, { $id: 'OutputProjectSchema' })
 );
 ```
 
@@ -457,6 +512,8 @@ useRoute('project')
 
 ### Pattern 3: Nested Schemas
 
+**⚠️ IMPORTANT: Register base schemas FIRST!**
+
 **Before:**
 ```typescript
 import { Type, Ref } from '@tsdiapi/server';
@@ -471,14 +528,20 @@ const ListSchema = Type.Object({
 
 **After:**
 ```typescript
-import { useSchema, Type } from '@tsdiapi/server';
+import { addSchema, Type } from '@tsdiapi/server';
 
-const ItemSchema = useSchema(Type.Object({...}), 'ItemSchema');
-const ListSchema = useSchema(
+// ✅ STEP 1: Register base schema FIRST
+const ItemSchema = addSchema(
+  Type.Object({...}, { $id: 'ItemSchema' })
+);
+
+// ✅ STEP 2: Register dependent schema AFTER
+const ListSchema = addSchema(
   Type.Object({
-    items: Type.Array(useSchema(ItemSchema)) // ✅ Creates Type.Ref()
-  }),
-  'ListSchema'
+    items: Type.Array(Type.Ref('ItemSchema')) // ✅ Use Type.Ref() with string ID
+  }, {
+    $id: 'ListSchema'
+  })
 );
 ```
 
@@ -491,14 +554,16 @@ const ListSchema = useSchema(
 **Solution:**
 1. Check the error message - it shows schema details
 2. Find the schema in your code
-3. Wrap it with `useSchema()`:
+3. Register it with `addSchema()`:
 
 ```typescript
 // Before
 const MySchema = Type.Object({...});
 
 // After
-const MySchema = useSchema(Type.Object({...}), 'MySchema');
+const MySchema = addSchema(
+  Type.Object({...}, { $id: 'MySchema' })
+);
 ```
 
 ### Error: "Schema already registered"
@@ -515,9 +580,10 @@ const MySchema = useSchema(Type.Object({...}), 'MySchema');
 **Problem:** Schema not registered.
 
 **Solution:**
-1. Ensure schema is registered with `useSchema()`
+1. Ensure schema is registered with `addSchema()`
 2. Check that `$id` is set correctly
 3. Verify schema is imported in route file
+4. **Check registration order** - dependencies must be registered first!
 
 ### Performance Issues
 
@@ -525,17 +591,19 @@ const MySchema = useSchema(Type.Object({...}), 'MySchema');
 
 **Solution:**
 1. Ensure `legacyAutoSchemaRegistration: false` (default)
-2. Check that all schemas use `useSchema()` explicitly
-3. Avoid registering schemas multiple times
+2. Check that all schemas use `addSchema()` explicitly
+3. **Register schemas in correct dependency order** - base schemas first!
+4. Avoid registering schemas multiple times
 
 ## Migration Checklist
 
 - [ ] Enable `legacyAutoSchemaRegistration: true` temporarily
 - [ ] Find all `.schemas.ts` files
-- [ ] Replace `Type.Object({...}, { $id: '...' })` with `useSchema(Type.Object({...}), '...')`
-- [ ] Replace `Ref()` with `useSchema()` for references
+- [ ] Replace `Type.Object({...}, { $id: '...' })` with `addSchema(Type.Object({...}, { $id: '...' }))`
+- [ ] Replace `Ref()` with `Type.Ref('SchemaId')` or `refSchema<typeof Schema>('SchemaId')` for references
+- [ ] **Ensure correct registration order** - base schemas registered before dependent schemas
 - [ ] Update all route definitions to use registered schemas
-- [ ] Update imports (`registerSchema` → `useSchema`, remove `Ref`)
+- [ ] Update imports (`registerSchema` → `addSchema`, `Ref` → `Type.Ref` or `refSchema`)
 - [ ] Test each feature after migration
 - [ ] Disable `legacyAutoSchemaRegistration` (remove option)
 - [ ] Verify no automatic registration warnings
@@ -549,15 +617,17 @@ const MySchema = useSchema(Type.Object({...}), 'MySchema');
 ✅ **Better Errors** - Detailed error messages with schema info  
 ✅ **Cleaner Code** - All registrations visible in code  
 ✅ **Easier Debugging** - Clear schema references  
+✅ **Dependency Management** - Clear order of registration prevents errors  
 
 ## Need Help?
 
 If you encounter issues during migration:
 
 1. Check error messages - they now include schema details
-2. Enable legacy mode temporarily to isolate issues
-3. Review the [SCHEMA_ID_REQUIREMENT.md](./SCHEMA_ID_REQUIREMENT.md) guide
-4. See [REGISTER_SCHEMA_GUIDE.md](./REGISTER_SCHEMA_GUIDE.md) for `useSchema()` examples
+2. **Check registration order** - ensure dependencies are registered first
+3. Enable legacy mode temporarily to isolate issues
+4. Review the [SCHEMA_ID_REQUIREMENT.md](./SCHEMA_ID_REQUIREMENT.md) guide
+5. See [REGISTER_SCHEMA_GUIDE.md](./REGISTER_SCHEMA_GUIDE.md) for `addSchema()` examples
 
 Happy refactoring! 🚀
 

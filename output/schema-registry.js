@@ -1,78 +1,314 @@
+import { Type } from '@sinclair/typebox';
 import { find } from 'fsesm';
 import { pathToFileURL } from 'url';
 import path from 'path';
-/**
- * Schema registry for managing TypeBox schemas with $id
- * Automatically resolves dependencies and registers schemas in correct order
- */
 export class SchemaRegistry {
     registeredIds = new Set();
     schemaMap = new Map();
-    dependencies = new Map();
+    // Lazy container for schemas - stored here before registration in Fastify
+    pendingSchemas = new Map();
+    // Flag indicating whether initial flush has been done
+    flushed = false;
     fastify;
-    constructor(fastify) {
+    options;
+    originalAddSchema;
+    constructor(fastify, options = {}) {
         this.fastify = fastify;
+        this.options = {
+            logDuplicateSchemas: false,
+            ...options
+        };
+        // Override fastify.addSchema to use our addSchema method
+        this.overrideFastifyAddSchema();
     }
     /**
-     * Extract all schema IDs referenced via Type.Ref() from a schema
+     * Override fastify.addSchema to use our addSchema method
+     * This ensures all schema registration goes through our unified controller
      */
-    extractDependencies(schema, dependencies = new Set(), visited = new Set()) {
-        if (!schema || typeof schema !== 'object') {
-            return dependencies;
+    overrideFastifyAddSchema() {
+        // Store original method
+        this.originalAddSchema = this.fastify.addSchema.bind(this.fastify);
+        // Override with our method (must return FastifyInstance)
+        this.fastify.addSchema = (schema) => {
+            this.addSchema(schema);
+            return this.fastify;
+        };
+    }
+    /**
+     * Restore original fastify.addSchema (useful for testing)
+     */
+    restoreFastifyAddSchema() {
+        if (this.originalAddSchema) {
+            this.fastify.addSchema = this.originalAddSchema;
         }
-        // Prevent infinite recursion
-        if (visited.has(schema)) {
-            return dependencies;
+    }
+    /**
+     * Add schema to registry (safe duplicate registration)
+     * - Requires $id (throws if missing)
+     * - Checks for duplicates in registry and Fastify (silently skips if found)
+     * - If not flushed yet: stores in pendingSchemas for later registration
+     * - If already flushed: registers immediately in Fastify
+     * - Returns schema with $id for type safety
+     *
+     * NOTE: Dependencies must be registered before schemas that reference them.
+     * Fastify will throw an error if a referenced schema is not registered.
+     */
+    addSchema(schema) {
+        // Require $id
+        if (!schema || !schema.$id || typeof schema.$id !== 'string') {
+            throw new Error('Schema must have $id property. ' +
+                'Use Type.Object({...}, { $id: "SchemaName" }) or addSchema(Type.Object({...}, { $id: "SchemaName" }))');
         }
-        visited.add(schema);
-        // Check if this is a Type.Ref() - TypeBox stores ref in $ref property
-        const refId = schema.$ref;
-        if (typeof refId === 'string') {
-            dependencies.add(refId);
-            return dependencies; // Don't recurse into refs
+        const schemaId = schema.$id;
+        // Check if already registered in our registry
+        if (this.registeredIds.has(schemaId)) {
+            // Already registered - safe to skip (idempotent)
+            // Return existing schema if available, otherwise return passed schema
+            const existingSchema = this.schemaMap.get(schemaId) || this.fastify.getSchema(schemaId);
+            return (existingSchema || schema);
         }
-        // Check for TypeBox internal ref structure
-        const typeboxRef = schema[Symbol.for('TypeBox.Ref')];
-        if (typeof typeboxRef === 'string') {
-            dependencies.add(typeboxRef);
-            return dependencies;
-        }
-        // Recursively check all properties
-        for (const key in schema) {
-            const value = schema[key];
-            if (Array.isArray(value)) {
-                value.forEach(item => {
-                    if (item && typeof item === 'object') {
-                        this.extractDependencies(item, dependencies, visited);
-                    }
-                });
+        // Check if already registered in Fastify
+        try {
+            const existingSchema = this.fastify.getSchema(schemaId);
+            if (existingSchema) {
+                // Already registered in Fastify - safe to skip (idempotent)
+                this.registeredIds.add(schemaId);
+                return existingSchema;
             }
-            else if (value && typeof value === 'object' && value !== null) {
-                // Skip circular references
-                if (!visited.has(value)) {
-                    this.extractDependencies(value, dependencies, visited);
+        }
+        catch (error) {
+            // Fastify might not be ready yet - continue
+        }
+        // Store schema in map for reference
+        this.schemaMap.set(schemaId, schema);
+        // If already flushed, register immediately in Fastify
+        if (this.flushed) {
+            // Register the schema immediately
+            // Fastify will throw an error if referenced schemas are not registered
+            this.registerInFastify(schema);
+            this.registeredIds.add(schemaId);
+        }
+        else {
+            // Not flushed yet - store in pending schemas for later batch registration
+            this.pendingSchemas.set(schemaId, schema);
+        }
+        return schema;
+    }
+    /**
+     * Create a schema reference (Type.Ref())
+     * Uses only string ID with generic type parameter to avoid circular dependency issues.
+     * Generic type parameter is REQUIRED to ensure type safety.
+     *
+     * @example
+     * ```typescript
+     * registry.refSchema<typeof MySchema>('MySchema')
+     * ```
+     */
+    refSchema(schemaId) {
+        if (!schemaId || typeof schemaId !== 'string') {
+            throw new Error(`refSchema() requires a string schema ID. ` +
+                `Received: ${typeof schemaId}. ` +
+                `Example: refSchema<typeof MySchema>('MySchema')`);
+        }
+        return Type.Ref(schemaId);
+    }
+    /**
+     * Flush all pending schemas to Fastify
+     * Registers all schemas from lazy container in order they were added
+     * After flush, all new schemas will be registered immediately
+     *
+     * NOTE: Schemas must be registered in correct dependency order.
+     * If a schema references another schema via Type.Ref(), the referenced
+     * schema must be registered first. Fastify will throw an error otherwise.
+     */
+    flushSchemas() {
+        // Mark as flushed - after this, schemas will be registered immediately
+        this.flushed = true;
+        if (this.pendingSchemas.size === 0) {
+            return;
+        }
+        // Register all pending schemas in order they were added
+        // Fastify will throw an error if referenced schemas are not registered
+        for (const schema of this.pendingSchemas.values()) {
+            if (!schema.$id)
+                continue;
+            const schemaId = schema.$id;
+            if (!this.registeredIds.has(schemaId)) {
+                try {
+                    this.registerInFastify(schema);
+                    this.registeredIds.add(schemaId);
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    // Provide helpful error message about dependency order
+                    if (errorMessage.includes('not found') || errorMessage.includes('reference')) {
+                        console.error(`❌ Failed to register schema "${schemaId}": ${errorMessage}\n` +
+                            `   Make sure all referenced schemas are registered before this schema.\n` +
+                            `   Example: If SchemaA uses Type.Ref('SchemaB'), register SchemaB first.`);
+                    }
+                    throw error;
                 }
             }
         }
-        return dependencies;
+        // Clear pending schemas after registration
+        this.pendingSchemas.clear();
     }
     /**
-     * Register a schema with dependency resolution
+     * Check if schema is a response wrapper (has structure { status: Literal, data: T })
+     * Response wrappers are generated automatically and should be excluded from duplicate detection
+     */
+    isResponseWrapper(schema) {
+        if (!schema || typeof schema !== 'object') {
+            return false;
+        }
+        // Check if schema has properties matching response wrapper pattern
+        const props = schema.properties;
+        if (!props || typeof props !== 'object') {
+            return false;
+        }
+        // Response wrapper has: { status: Literal(number), data: T }
+        const hasStatus = props.status &&
+            (props.status.const !== undefined || props.status.enum !== undefined);
+        const hasData = props.data !== undefined;
+        return hasStatus && hasData;
+    }
+    /**
+     * Check if schema is a Prisma-generated schema
+     * Prisma-generated schemas follow similar patterns but have different fields, so they shouldn't be flagged as duplicates
+     */
+    isPrismaGeneratedSchema(schema) {
+        if (!schema || typeof schema !== 'object') {
+            return false;
+        }
+        const schemaId = schema.$id;
+        if (!schemaId || typeof schemaId !== 'string') {
+            return false;
+        }
+        // Prisma-generated schemas are in @generated/typebox-schemas/models/
+        // They typically have names like OutputUserSchema, InputUserSchema, etc.
+        // Check if schema comes from generated folder by checking if it's imported from @generated
+        // We can't check the import path directly, but we can check the naming pattern
+        // Prisma schemas follow strict naming: Output{Model}Schema, Input{Model}Schema
+        // Check if it matches Prisma schema naming pattern and is likely generated
+        // This is a heuristic - if schema has standard Prisma fields (id, createdAt, updatedAt, deletedAt)
+        // and follows the naming pattern, it's likely Prisma-generated
+        const props = schema.properties;
+        if (props && typeof props === 'object') {
+            const hasPrismaFields = (props.id !== undefined) &&
+                (props.createdAt !== undefined || props.updatedAt !== undefined);
+            // Prisma Output schemas typically have optional fields
+            const hasOptionalFields = Object.keys(props).length > 0;
+            if (hasPrismaFields && hasOptionalFields) {
+                // Additional check: if schema ID matches Prisma pattern
+                const isOutputSchema = schemaId.startsWith('Output') && schemaId.endsWith('Schema');
+                const isInputSchema = schemaId.startsWith('Input') && schemaId.endsWith('Schema');
+                if (isOutputSchema || isInputSchema) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /**
+     * Check for duplicate schemas by structure (not just by name)
+     * Returns array of duplicate schema IDs if found
+     * Checks both in-memory registry and Fastify instance
+     * Excludes response wrappers from duplicate detection (they all have same structure by design)
+     */
+    findDuplicateSchemas(newSchema) {
+        const duplicates = [];
+        // Skip duplicate detection for response wrappers - they all have same structure by design
+        if (this.isResponseWrapper(newSchema)) {
+            return duplicates;
+        }
+        // Skip duplicate detection for Prisma-generated schemas - they follow similar patterns but have different fields
+        const isNewSchemaPrisma = this.isPrismaGeneratedSchema(newSchema);
+        // Check schemas in memory registry
+        for (const [existingId, existingSchema] of this.schemaMap.entries()) {
+            // Skip if it's the same schema by reference
+            if (existingSchema === newSchema) {
+                continue;
+            }
+            // Skip response wrappers
+            if (this.isResponseWrapper(existingSchema)) {
+                continue;
+            }
+            // Skip Prisma-generated schemas from comparison
+            // Only compare Prisma schemas with non-Prisma schemas, not Prisma with Prisma
+            const isExistingSchemaPrisma = this.isPrismaGeneratedSchema(existingSchema);
+            if (isNewSchemaPrisma && isExistingSchemaPrisma) {
+                // Both are Prisma-generated - skip comparison (they're expected to have similar patterns)
+                continue;
+            }
+            // Check structural equivalence
+            if (areSchemasStructurallyEquivalent(existingSchema, newSchema)) {
+                duplicates.push(existingId);
+            }
+        }
+        // Also check schemas already registered in Fastify
+        try {
+            const fastifySchemas = this.fastify.getSchemas();
+            if (fastifySchemas) {
+                for (const [existingId, existingSchema] of Object.entries(fastifySchemas)) {
+                    // Skip if already found in memory registry
+                    if (duplicates.includes(existingId)) {
+                        continue;
+                    }
+                    // Skip if it's the same schema by reference
+                    if (existingSchema === newSchema) {
+                        continue;
+                    }
+                    // Skip response wrappers
+                    if (this.isResponseWrapper(existingSchema)) {
+                        continue;
+                    }
+                    // Skip Prisma-generated schemas from comparison
+                    const isExistingSchemaPrisma = this.isPrismaGeneratedSchema(existingSchema);
+                    if (isNewSchemaPrisma && isExistingSchemaPrisma) {
+                        // Both are Prisma-generated - skip comparison
+                        continue;
+                    }
+                    // Check structural equivalence
+                    if (areSchemasStructurallyEquivalent(existingSchema, newSchema)) {
+                        duplicates.push(existingId);
+                    }
+                }
+            }
+        }
+        catch (error) {
+            // Fastify might not have getSchemas() method in older versions
+            // Ignore and continue
+        }
+        return duplicates;
+    }
+    /**
+     * Register a schema with duplicate detection
+     * NOTE: Dependencies must be registered before schemas that reference them.
      */
     register(schema) {
         if (!schema || !schema.$id) {
             return;
         }
         const schemaId = schema.$id;
-        // Skip if already registered
+        // Skip if already registered with same ID
         if (this.registeredIds.has(schemaId)) {
             return;
         }
+        // Check for structural duplicates ONLY if option is enabled (performance optimization)
+        // This is expensive O(n²) operation, so skip by default
+        if (this.options.logDuplicateSchemas) {
+            const duplicates = this.findDuplicateSchemas(schema);
+            if (duplicates.length > 0) {
+                const duplicateList = duplicates.join(', ');
+                console.warn(`⚠️  Duplicate schema structure detected!\n` +
+                    `   Schema "${schemaId}" has the same structure as: ${duplicateList}\n` +
+                    `   Recommendation: Consider merging these schemas into a single shared schema.\n` +
+                    `   Example: Create a common schema in src/api/shared/ and reuse it.\n` +
+                    `   This will reduce code duplication and improve maintainability.`);
+            }
+        }
         // Store schema
         this.schemaMap.set(schemaId, schema);
-        // Extract dependencies
-        const deps = this.extractDependencies(schema);
-        this.dependencies.set(schemaId, deps);
     }
     /**
      * Register multiple schemas at once
@@ -83,70 +319,37 @@ export class SchemaRegistry {
         }
     }
     /**
-     * Resolve and register all schemas in correct dependency order
+     * Register all schemas from schemaMap in Fastify
+     * NOTE: Schemas must be registered in correct dependency order.
+     * Fastify will throw an error if referenced schemas are not registered.
      */
     resolveAndRegister() {
-        const registered = new Set();
-        const toRegister = Array.from(this.schemaMap.keys());
-        // Topological sort to register dependencies first
-        const sorted = this.topologicalSort(toRegister);
-        for (const schemaId of sorted) {
-            const schema = this.schemaMap.get(schemaId);
-            if (!schema)
+        for (const schema of this.schemaMap.values()) {
+            if (!schema.$id)
                 continue;
-            // Register dependencies first
-            const deps = this.dependencies.get(schemaId) || new Set();
-            for (const depId of deps) {
-                if (!registered.has(depId)) {
-                    const depSchema = this.schemaMap.get(depId);
-                    if (depSchema) {
-                        this.registerInFastify(depSchema);
-                        registered.add(depId);
+            const schemaId = schema.$id;
+            if (!this.registeredIds.has(schemaId)) {
+                try {
+                    this.registerInFastify(schema);
+                    this.registeredIds.add(schemaId);
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    // Provide helpful error message about dependency order
+                    if (errorMessage.includes('not found') || errorMessage.includes('reference')) {
+                        console.error(`❌ Failed to register schema "${schemaId}": ${errorMessage}\n` +
+                            `   Make sure all referenced schemas are registered before this schema.\n` +
+                            `   Example: If SchemaA uses Type.Ref('SchemaB'), register SchemaB first.`);
                     }
+                    throw error;
                 }
             }
-            // Register the schema itself
-            if (!registered.has(schemaId)) {
-                this.registerInFastify(schema);
-                registered.add(schemaId);
-            }
         }
-    }
-    /**
-     * Topological sort for dependency resolution
-     */
-    topologicalSort(schemaIds) {
-        const visited = new Set();
-        const visiting = new Set();
-        const result = [];
-        const visit = (id) => {
-            if (visiting.has(id)) {
-                // Circular dependency detected - register anyway
-                return;
-            }
-            if (visited.has(id)) {
-                return;
-            }
-            visiting.add(id);
-            const deps = this.dependencies.get(id) || new Set();
-            for (const depId of deps) {
-                if (this.schemaMap.has(depId)) {
-                    visit(depId);
-                }
-            }
-            visiting.delete(id);
-            visited.add(id);
-            result.push(id);
-        };
-        for (const id of schemaIds) {
-            if (!visited.has(id)) {
-                visit(id);
-            }
-        }
-        return result;
     }
     /**
      * Register schema in Fastify instance
+     * Uses original Fastify method to avoid infinite recursion
+     * Optimized: removed expensive structural comparison for performance
      */
     registerInFastify(schema) {
         if (!schema.$id) {
@@ -154,12 +357,24 @@ export class SchemaRegistry {
         }
         const schemaId = schema.$id;
         // Check if already registered in Fastify
-        if (this.fastify.getSchema(schemaId)) {
+        const existingSchema = this.fastify.getSchema(schemaId);
+        if (existingSchema) {
+            // Fast check: if same reference, skip
+            // If different reference but same $id, Fastify will handle it
+            // Removed expensive structural comparison for performance
             this.registeredIds.add(schemaId);
             return;
         }
         try {
-            this.fastify.addSchema(schema);
+            // Use original Fastify method to avoid infinite recursion
+            // (fastify.addSchema is overridden to call this.addSchema, which would cause recursion)
+            if (this.originalAddSchema) {
+                this.originalAddSchema(schema);
+            }
+            else {
+                // Fallback: call Fastify's internal method directly
+                this.fastify.addSchema(schema);
+            }
             this.registeredIds.add(schemaId);
         }
         catch (error) {
@@ -188,12 +403,31 @@ export class SchemaRegistry {
         return Array.from(this.registeredIds);
     }
     /**
+     * Get schema by ID from registry (checks both pending and registered schemas)
+     */
+    getSchema(schemaId) {
+        return this.pendingSchemas.get(schemaId) || this.schemaMap.get(schemaId);
+    }
+    /**
+     * Get count of pending schemas (not yet flushed to Fastify)
+     */
+    getPendingCount() {
+        return this.pendingSchemas.size;
+    }
+    /**
+     * Check if schemas have been flushed
+     */
+    isFlushed() {
+        return this.flushed;
+    }
+    /**
      * Clear registry (useful for testing)
      */
     clear() {
         this.registeredIds.clear();
         this.schemaMap.clear();
-        this.dependencies.clear();
+        this.pendingSchemas.clear();
+        this.flushed = false;
     }
 }
 /**
@@ -227,120 +461,6 @@ export function extractSchemasFromModule(module) {
     }
     return schemas;
 }
-// Implementation
-export function useSchema(schema, nameOrOptions) {
-    // If no nameOrOptions provided, check if schema has $id at runtime
-    if (!nameOrOptions) {
-        // Check if schema has $id at runtime (TypeBox stores it in the object, TypeScript may not see it)
-        const schemaObj = schema;
-        if (schemaObj && typeof schemaObj === 'object') {
-            const schemaId = schemaObj.$id;
-            if (schemaId && typeof schemaId === 'string') {
-                // Register schema if registry is available (for dependency tracking)
-                try {
-                    const registry = getSchemaRegistry();
-                    registry.register(schema);
-                }
-                catch (error) {
-                    // Registry not initialized yet - that's okay, auto-registry will handle it
-                }
-                // Return schema itself with type assertion - it already has $id in runtime
-                return schema;
-            }
-        }
-        // Schema doesn't have $id, throw helpful error
-        throw new Error('useSchema: Schema must have $id property when used without name/options. ' +
-            'The schema you passed does not have $id. ' +
-            'Solutions:\n' +
-            '1. Use useSchema(schema, "SchemaName") to register it first\n' +
-            '2. Or ensure the schema has $id: Type.Object({...}, { $id: "SchemaName" })');
-    }
-    // Otherwise, register schema
-    if (!schema || typeof schema !== 'object') {
-        throw new Error('useSchema: Schema must be a valid TypeBox schema object');
-    }
-    // Handle string parameter (simple case)
-    let options;
-    if (typeof nameOrOptions === 'string') {
-        options = { name: nameOrOptions };
-    }
-    else {
-        options = nameOrOptions || {};
-    }
-    const { id, name, validate = true, checkDependencies = true, strict = true } = options;
-    // Generate $id if not provided
-    let schemaId;
-    if (id) {
-        schemaId = id;
-    }
-    else if (schema.$id && typeof schema.$id === 'string') {
-        schemaId = schema.$id;
-    }
-    else if (name) {
-        schemaId = name;
-    }
-    else {
-        throw new Error('useSchema: Schema ID is required. ' +
-            'Provide either: 1) explicit id option, 2) $id in schema, or 3) name option');
-    }
-    // Validate schema structure if enabled
-    if (validate) {
-        validateSchemaStructure(schema, schemaId);
-    }
-    // Check if schema already registered
-    try {
-        const registry = getSchemaRegistry();
-        const existingSchema = registry.fastify.getSchema(schemaId);
-        if (existingSchema) {
-            // Check if it's the same schema (by reference or structure)
-            if (existingSchema === schema) {
-                // Same schema, return it
-                return schema;
-            }
-            if (strict) {
-                // Check if schemas are structurally equivalent
-                if (!areSchemasEquivalent(existingSchema, schema)) {
-                    throw new Error(`Schema "${schemaId}" is already registered with a different definition. ` +
-                        `This usually means you have duplicate schema definitions. ` +
-                        `Check your code for duplicate schema exports or conflicting $id values.`);
-                }
-            }
-            // Return existing schema
-            return existingSchema;
-        }
-    }
-    catch (error) {
-        // Registry not initialized - that's okay, we'll register it
-        if (error instanceof Error && !error.message.includes('not initialized')) {
-            throw error;
-        }
-    }
-    // Set $id on schema
-    schema.$id = schemaId;
-    // Register schema
-    try {
-        const registry = getSchemaRegistry();
-        // Check dependencies if enabled
-        if (checkDependencies) {
-            const deps = extractDependenciesFromSchema(schema);
-            for (const depId of deps) {
-                // Try to get dependency from registry
-                const depSchema = registry.fastify.getSchema(depId);
-                if (!depSchema) {
-                    console.warn(`Schema "${schemaId}" references "${depId}" which is not yet registered. ` +
-                        `Make sure "${depId}" is registered before "${schemaId}".`);
-                }
-            }
-        }
-        registry.register(schema);
-        registry.resolveAndRegister();
-    }
-    catch (error) {
-        // If registry not available, schema will be registered by auto-registry
-        // But we still set $id for consistency
-    }
-    return schema;
-}
 /**
  * Validate schema structure
  */
@@ -362,19 +482,184 @@ function validateSchemaStructure(schema, schemaId) {
     }
 }
 /**
- * Check if two schemas are equivalent
+ * Extract schema prefix from schema ID (Query, Input, Output, etc.)
  */
-function areSchemasEquivalent(schema1, schema2) {
-    // Simple check - compare JSON representation
-    // This is not perfect but catches most cases
+function getSchemaPrefix(schemaId) {
+    const prefixes = ['Query', 'Input', 'Output', 'Params', 'Headers'];
+    for (const prefix of prefixes) {
+        if (schemaId.startsWith(prefix)) {
+            return prefix;
+        }
+    }
+    return null;
+}
+/**
+ * Deep comparison of schemas ignoring metadata fields
+ * Compares structure, types, field names, and constraints but ignores $id, description, and other metadata
+ * Similar to NestJS duplicate DTO detection, but more strict - compares field names too
+ */
+function areSchemasStructurallyEquivalent(schema1, schema2, visited = new Set()) {
+    // Prevent infinite recursion
+    if (visited.has(schema1) || visited.has(schema2)) {
+        return schema1 === schema2;
+    }
+    visited.add(schema1);
+    visited.add(schema2);
+    // Quick check: if schemas have different prefixes (Query vs Input vs Output), they're likely not duplicates
+    const schema1Id = schema1.$id;
+    const schema2Id = schema2.$id;
+    if (schema1Id && schema2Id) {
+        const prefix1 = getSchemaPrefix(schema1Id);
+        const prefix2 = getSchemaPrefix(schema2Id);
+        if (prefix1 && prefix2 && prefix1 !== prefix2) {
+            // Different prefixes - likely not duplicates (e.g., QueryEntityLogsSchema vs OutputEntityLogSchema)
+            return false;
+        }
+    }
+    // Quick check: if both are Object schemas, compare property names first
+    // This is a fast way to reject non-duplicates early
+    const props1 = schema1.properties;
+    const props2 = schema2.properties;
+    if (props1 && props2 && typeof props1 === 'object' && typeof props2 === 'object') {
+        const keys1 = Object.keys(props1).sort();
+        const keys2 = Object.keys(props2).sort();
+        // If property names don't match, they're definitely not duplicates
+        if (keys1.length !== keys2.length || keys1.join(',') !== keys2.join(',')) {
+            return false;
+        }
+    }
+    else if ((props1 && !props2) || (!props1 && props2)) {
+        // One has properties, the other doesn't - not duplicates
+        return false;
+    }
+    // Normalize schemas by removing metadata fields but preserving field names and structure
+    const normalize = (schema, depth = 0) => {
+        // Prevent deep recursion
+        if (depth > 10) {
+            return schema;
+        }
+        if (!schema || typeof schema !== 'object') {
+            return schema;
+        }
+        // Handle Type.Ref() - preserve the full reference path
+        // This is critical: different $ref values mean different schemas, even if structure is similar
+        if (typeof schema.$ref === 'string') {
+            return {
+                $ref: schema.$ref,
+                // Also preserve any additional type information if present
+                ...(schema.type ? { type: schema.type } : {}),
+                ...(schema.anyOf ? { anyOf: schema.anyOf } : {}),
+                ...(schema.oneOf ? { oneOf: schema.oneOf } : {})
+            };
+        }
+        // For Object schemas, preserve property names and their types
+        if (schema.properties && typeof schema.properties === 'object') {
+            const normalized = {
+                type: schema.type || 'object',
+                properties: {},
+                required: schema.required || []
+            };
+            // Sort property names for consistent comparison
+            const propNames = Object.keys(schema.properties).sort();
+            for (const propName of propNames) {
+                const propSchema = schema.properties[propName];
+                // Normalize property schema recursively
+                const normalizedProp = normalize(propSchema, depth + 1);
+                // For $ref, preserve the full reference path to distinguish different references
+                // This ensures that schemas referencing different types are not considered duplicates
+                if (normalizedProp && typeof normalizedProp === 'object' && normalizedProp.$ref) {
+                    normalized.properties[propName] = normalizedProp;
+                }
+                else {
+                    normalized.properties[propName] = normalizedProp;
+                }
+            }
+            // Sort required array for consistent comparison
+            if (normalized.required) {
+                normalized.required = [...normalized.required].sort();
+            }
+            // Include additionalProperties if present
+            if ('additionalProperties' in schema) {
+                normalized.additionalProperties = schema.additionalProperties;
+            }
+            return normalized;
+        }
+        // For Array schemas
+        if (schema.items) {
+            return {
+                type: schema.type || 'array',
+                items: normalize(schema.items, depth + 1)
+            };
+        }
+        // For Union schemas
+        if (schema.anyOf || schema.oneOf) {
+            const unionKey = schema.anyOf ? 'anyOf' : 'oneOf';
+            return {
+                type: schema.type,
+                [unionKey]: schema[unionKey].map((item) => normalize(item, depth + 1))
+            };
+        }
+        // Create a copy without metadata fields for other schema types
+        const normalized = {};
+        const keys = [];
+        for (const key in schema) {
+            // Skip metadata fields that don't affect structure
+            if (key === '$id' ||
+                key === 'description' ||
+                key === 'title' ||
+                key === 'examples' ||
+                key === 'default' ||
+                key === '$comment' ||
+                key.startsWith('$') && key !== '$ref' && key !== '$schema') {
+                continue;
+            }
+            keys.push(key);
+        }
+        // Sort keys for consistent comparison
+        keys.sort();
+        for (const key of keys) {
+            const value = schema[key];
+            // Handle arrays
+            if (Array.isArray(value)) {
+                normalized[key] = value.map(item => item && typeof item === 'object' ? normalize(item, depth + 1) : item);
+                continue;
+            }
+            // Handle objects recursively
+            if (value && typeof value === 'object') {
+                normalized[key] = normalize(value, depth + 1);
+                continue;
+            }
+            // Copy primitive values
+            normalized[key] = value;
+        }
+        return normalized;
+    };
     try {
-        const json1 = JSON.stringify(schema1, null, 2);
-        const json2 = JSON.stringify(schema2, null, 2);
-        return json1 === json2;
+        const normalized1 = normalize(schema1);
+        const normalized2 = normalize(schema2);
+        // Compare normalized schemas using JSON stringification
+        // This will compare both structure AND field names
+        const compare = (obj1, obj2) => {
+            try {
+                const str1 = JSON.stringify(obj1, Object.keys(obj1 || {}).sort());
+                const str2 = JSON.stringify(obj2, Object.keys(obj2 || {}).sort());
+                return str1 === str2;
+            }
+            catch {
+                return false;
+            }
+        };
+        return compare(normalized1, normalized2);
     }
     catch {
         return false;
     }
+}
+/**
+ * Check if two schemas are equivalent (legacy function for backward compatibility)
+ */
+function areSchemasEquivalent(schema1, schema2) {
+    return areSchemasStructurallyEquivalent(schema1, schema2);
 }
 /**
  * Extract dependencies from a schema (for validation)
@@ -410,11 +695,29 @@ function extractDependenciesFromSchema(schema) {
  */
 let globalRegistry = null;
 /**
+ * Queue for schemas registered before registry initialization
+ */
+const pendingSchemas = [];
+/**
  * Get or create global schema registry
  */
-export function getSchemaRegistry(fastify) {
+export function getSchemaRegistry(fastify, options) {
     if (!globalRegistry && fastify) {
-        globalRegistry = new SchemaRegistry(fastify);
+        globalRegistry = new SchemaRegistry(fastify, options);
+        // Register all pending schemas
+        if (pendingSchemas.length > 0) {
+            console.log(`📦 Registering ${pendingSchemas.length} early-loaded schema(s)...`);
+            for (const schema of pendingSchemas) {
+                try {
+                    globalRegistry.addSchema(schema);
+                    console.log(`  ✅ Registered: ${schema.$id}`);
+                }
+                catch (err) {
+                    console.warn(`  ⚠️ Failed to register early schema ${schema.$id}:`, err.message);
+                }
+            }
+            pendingSchemas.length = 0; // Clear queue
+        }
     }
     if (!globalRegistry) {
         throw new Error('Schema registry not initialized. Call initializeSchemaRegistry() first.');
@@ -424,8 +727,22 @@ export function getSchemaRegistry(fastify) {
 /**
  * Initialize global schema registry
  */
-export function initializeSchemaRegistry(fastify) {
-    globalRegistry = new SchemaRegistry(fastify);
+export function initializeSchemaRegistry(fastify, options) {
+    globalRegistry = new SchemaRegistry(fastify, options);
+    // Register all pending schemas
+    if (pendingSchemas.length > 0) {
+        console.log(`📦 Registering ${pendingSchemas.length} early-loaded schema(s)...`);
+        for (const schema of pendingSchemas) {
+            try {
+                globalRegistry.addSchema(schema);
+                console.log(`  ✅ Registered: ${schema.$id}`);
+            }
+            catch (err) {
+                console.warn(`  ⚠️ Failed to register early schema ${schema.$id}:`, err.message);
+            }
+        }
+        pendingSchemas.length = 0; // Clear queue
+    }
     return globalRegistry;
 }
 /**
@@ -435,11 +752,99 @@ export function clearSchemaRegistry() {
     globalRegistry = null;
 }
 /**
+ * Global addSchema function - unified schema registration controller
+ * Adds schema to lazy container (safe duplicate registration)
+ * Returns schema with $id for type safety
+ *
+ * If registry is not initialized, schema is queued and will be registered when registry is initialized.
+ *
+ * @example
+ * ```typescript
+ * import { addSchema, Type } from '@tsdiapi/server';
+ *
+ * const MySchema = addSchema(Type.Object({ name: Type.String() }, { $id: 'MySchema' }));
+ * ```
+ */
+export function addSchema(schema) {
+    try {
+        const registry = getSchemaRegistry();
+        return registry.addSchema(schema);
+    }
+    catch (error) {
+        // Registry not initialized - queue schema for later registration
+        if (error instanceof Error && error.message.includes('not initialized')) {
+            // Validate schema has $id
+            if (!schema.$id || typeof schema.$id !== 'string') {
+                throw new Error('Schema must have $id property. ' +
+                    'Received schema: ' + JSON.stringify(schema, null, 2));
+            }
+            // Add to pending queue
+            pendingSchemas.push(schema);
+            // Log for transparency (only in development)
+            if (process.env.NODE_ENV !== 'production') {
+                console.log(`⏳ Schema '${schema.$id}' queued for registration (registry not yet initialized)`);
+            }
+            // Return schema as-is (will be registered when registry initializes)
+            return schema;
+        }
+        throw error;
+    }
+}
+/**
+ * Global refSchema function - create schema reference
+ *
+ * Uses only string ID with generic type parameter to avoid circular dependency issues.
+ * Generic type parameter is REQUIRED to ensure type safety.
+ * This approach prevents TypeScript from trying to resolve schema types at compile time.
+ *
+ * @example
+ * ```typescript
+ * import { refSchema, Type, addSchema } from '@tsdiapi/server';
+ *
+ * const MySchema = addSchema(Type.Object({ name: Type.String() }, { $id: 'MySchema' }));
+ *
+ * // ✅ CORRECT - Use string ID with REQUIRED generic type
+ * const ref = refSchema<typeof MySchema>('MySchema');
+ * ```
+ */
+export function refSchema(schemaId) {
+    if (!schemaId || typeof schemaId !== 'string') {
+        throw new Error(`refSchema() requires a string schema ID. ` +
+            `Received: ${typeof schemaId}. ` +
+            `Example: refSchema<typeof MySchema>('MySchema')`);
+    }
+    return Type.Ref(schemaId);
+}
+/**
+ * Flush all pending schemas to Fastify
+ * Should be called before server starts to register all schemas
+ */
+export function flushSchemas() {
+    try {
+        const registry = getSchemaRegistry();
+        registry.flushSchemas();
+    }
+    catch (error) {
+        // Registry not initialized - that's okay, nothing to flush
+        if (error instanceof Error && error.message.includes('not initialized')) {
+            return;
+        }
+        throw error;
+    }
+}
+/**
  * Automatically scan and register all schemas from .schemas.ts files
  * This should be called before loading route modules
  */
-export async function autoRegisterSchemas(fastify, apiDir) {
-    const registry = initializeSchemaRegistry(fastify);
+export async function autoRegisterSchemas(fastify, apiDir, options) {
+    // Get or initialize registry (may already be initialized)
+    let registry;
+    try {
+        registry = getSchemaRegistry(fastify, options);
+    }
+    catch {
+        registry = initializeSchemaRegistry(fastify, options);
+    }
     try {
         // Find all .schemas.ts files
         const schemaFiles = await find('**/*.schemas.ts', {
@@ -452,25 +857,30 @@ export async function autoRegisterSchemas(fastify, apiDir) {
             absolute: true
         }).catch(() => []);
         const allSchemaFiles = [...schemaFiles, ...generatedSchemaFiles];
-        // Load all schema files
-        for (const filePath of allSchemaFiles) {
+        // Load all schema files in parallel for better performance
+        const loadPromises = allSchemaFiles.map(async (filePath) => {
             try {
                 const fileUrl = pathToFileURL(filePath).href;
                 const module = await import(fileUrl);
                 // Extract schemas from module
                 const schemas = extractSchemasFromModule(module);
-                // Register schemas (but don't resolve yet)
-                registry.registerMany(schemas);
+                return schemas;
             }
             catch (error) {
                 console.warn(`Failed to load schema file ${filePath}:`, error instanceof Error ? error.message : String(error));
+                return [];
             }
+        });
+        // Wait for all files to load in parallel
+        const allSchemasArrays = await Promise.all(loadPromises);
+        // Flatten and register all schemas
+        const allSchemas = allSchemasArrays.flat();
+        for (const schema of allSchemas) {
+            registry.addSchema(schema);
         }
-        // Resolve dependencies and register all schemas
-        registry.resolveAndRegister();
-        const registeredCount = registry.getRegisteredIds().length;
-        if (registeredCount > 0) {
-            console.log(`✅ Registered ${registeredCount} schemas automatically`);
+        const pendingCount = registry.getPendingCount();
+        if (pendingCount > 0) {
+            console.log(`✅ Added ${pendingCount} schemas to lazy container (will be flushed before server starts)`);
         }
     }
     catch (error) {

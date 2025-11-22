@@ -8,8 +8,7 @@ export * from './meta.js';
 export * from './response.js';
 export * from './request-context.js';
 export * from './schema-registry.js';
-export { useSchema } from './schema-registry.js';
-export type { RegisterSchemaOptions } from './schema-registry.js';
+export { addSchema, refSchema } from './schema-registry.js';
 export declare function getContext(): AppContext | null;
 export declare function createApp<T extends object = Record<string, any>>(options?: AppOptions<T>): Promise<AppContext<T> | null>;
 //# sourceMappingURL=index.d.ts.map

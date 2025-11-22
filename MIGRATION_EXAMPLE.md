@@ -82,47 +82,49 @@ export default async function controllers({ useRoute, fastify }: AppContext) {
 
 ```typescript
 // project.schemas.ts - AFTER
-import { Type, Static, registerSchema, Ref } from '@tsdiapi/server';
+import { Type, Static, addSchema } from '@tsdiapi/server';
 import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
 import { TeamMemberRole, TeamInvitationStatus } from '@generated/typebox-schemas/enums/index.js';
 import { DateString } from '@tsdiapi/server';
 
-// ✅ Auto $id from variable name, no typos possible (simple string usage)
-export const OutputUserProjectsListSchema = registerSchema(
+// ✅ Register schema with addSchema() - REQUIRED!
+export const OutputUserProjectsListSchema = addSchema(
   Type.Object({
-    projects: Type.Array(useSchema(OutputProjectSchema)) // Uses useSchema() helper
-  }),
-  'OutputUserProjectsListSchema' // ✅ Just pass the name as string
+    projects: Type.Array(Type.Ref('OutputProjectSchema')) // ✅ Use Type.Ref() for references
+  }, {
+    $id: 'OutputUserProjectsListSchema'
+  })
 );
 
-// ✅ No duplicates - registerSchema detects and prevents them
-// If you try to register same schema twice, it reuses the first one
-
-// ✅ Simple string usage (most common case)
-export const InputCreateProjectSchema = registerSchema(
+// ✅ Register input schema
+export const InputCreateProjectSchema = addSchema(
   Type.Object({
     name: Type.String({ minLength: 1, maxLength: 200 }),
     description: Type.Optional(Type.String({ maxLength: 5000 }))
-  }),
-  'InputCreateProjectSchema' // ✅ Simple string
+  }, {
+    $id: 'InputCreateProjectSchema',
+    additionalProperties: false
+  })
 );
 
-// ✅ Auto-registered, no manual addSchema() needed
-export const OutputProjectTeamMemberItemSchema = registerSchema(
+// ✅ STEP 1: Register base schema FIRST
+export const OutputProjectTeamMemberItemSchema = addSchema(
   Type.Object({
     userId: Type.String(),
     email: Type.String(),
     role: TeamMemberRole
-  }),
-  'OutputProjectTeamMemberItemSchema' // ✅ Simple string
+  }, {
+    $id: 'OutputProjectTeamMemberItemSchema'
+  })
 );
 
-// ✅ Dependencies checked automatically
-export const OutputProjectTeamSchema = registerSchema(
+// ✅ STEP 2: Register dependent schema AFTER base schema
+export const OutputProjectTeamSchema = addSchema(
   Type.Object({
-    members: Type.Array(useSchema(OutputProjectTeamMemberItemSchema))
-  }),
-  'OutputProjectTeamSchema' // ✅ Simple string - dependencies checked automatically
+    members: Type.Array(Type.Ref('OutputProjectTeamMemberItemSchema')) // ✅ Use Type.Ref()
+  }, {
+    $id: 'OutputProjectTeamSchema'
+  })
 );
 ```
 
@@ -130,11 +132,11 @@ export const OutputProjectTeamSchema = registerSchema(
 // project.controller.load.ts - AFTER
 export default async function controllers({ useRoute }: AppContext) {
   // ✅ No manual registration needed!
-  // Schemas are auto-registered when imported
+  // Schemas are registered when imported via addSchema()
   
   useRoute('project')
     .get("/")
-    .code(200, OutputUserProjectsListSchema) // ✅ Works directly
+    .code(200, OutputUserProjectsListSchema) // ✅ Works - schema is registered
     .handler(async (req) => {
       // ...
     })
@@ -153,7 +155,9 @@ $id: "OutputUserProjectsListSchema" // ❌ Manual, can have typos
 
 **After:**
 ```typescript
-{ name: 'OutputUserProjectsListSchema' } // ✅ Auto, type-safe
+addSchema(
+  Type.Object({...}, { $id: 'OutputUserProjectsListSchema' }) // ✅ Explicit $id
+);
 ```
 
 ### 2. No Manual Registration
@@ -165,24 +169,24 @@ context.fastify.addSchema(OutputProjectTeamMemberItemSchema); // ❌ Manual
 
 **After:**
 ```typescript
-registerSchema(..., { name: '...' }); // ✅ Auto
+addSchema(...); // ✅ Auto-registered
 ```
 
-### 3. Duplicate Detection
+### 3. Correct Registration Order
 
 **Before:**
 ```typescript
-// Two definitions with same $id - causes issues
-export const OutputUserProjectsListSchema = Type.Object({...}, { $id: "..." });
-export const OutputUserProjectsListSchema = Type.Object({...}, { $id: "..." });
+// ❌ No clear order - might fail if dependencies not registered
+export const OutputProjectTeamSchema = Type.Object({
+  members: Type.Array(Type.Ref('OutputProjectTeamMemberItemSchema'))
+}, { $id: "..." });
 ```
 
 **After:**
 ```typescript
-// registerSchema detects duplicates and reuses first one
-const schema1 = registerSchema(Type.Object({...}), { name: 'MySchema' });
-const schema2 = registerSchema(Type.Object({...}), { name: 'MySchema' });
-// schema2 === schema1 (reuses existing)
+// ✅ Clear order - base schema first, then dependent schema
+export const OutputProjectTeamMemberItemSchema = addSchema(...); // First
+export const OutputProjectTeamSchema = addSchema(...); // After
 ```
 
 ### 4. Dependency Validation
@@ -197,14 +201,13 @@ export const OutputProjectTeamSchema = Type.Object({
 
 **After:**
 ```typescript
-// Validates dependencies exist
-export const OutputProjectTeamSchema = registerSchema(
+// ✅ Order ensures dependencies exist
+export const OutputProjectTeamMemberItemSchema = addSchema(...); // Register first
+export const OutputProjectTeamSchema = addSchema(
   Type.Object({
-    members: Type.Array(useSchema(NonExistentSchema))
-  }),
-  { name: 'OutputProjectTeamSchema' }
+    members: Type.Array(Type.Ref('OutputProjectTeamMemberItemSchema')) // ✅ Already registered
+  }, { $id: 'OutputProjectTeamSchema' })
 );
-// Warning: Schema "OutputProjectTeamSchema" references "NonExistentSchema" which is not yet registered
 ```
 
 ### 5. Cleaner Controllers
@@ -227,6 +230,7 @@ export default async function controllers({ useRoute, fastify }: AppContext) {
 ```typescript
 export default async function controllers({ useRoute }: AppContext) {
   // ✅ No registration code needed!
+  // Schemas are registered when imported
   // ...
 }
 ```
@@ -235,8 +239,8 @@ export default async function controllers({ useRoute }: AppContext) {
 
 1. **Update imports**
    ```typescript
-   // Add registerSchema and Ref
-   import { registerSchema, Ref } from '@tsdiapi/server';
+   // Add addSchema
+   import { addSchema } from '@tsdiapi/server';
    ```
 
 2. **Replace schema definitions**
@@ -245,19 +249,22 @@ export default async function controllers({ useRoute }: AppContext) {
    export const MySchema = Type.Object({...}, { $id: "MySchema" });
    
    // To:
-   export const MySchema = registerSchema(
-     Type.Object({...}),
-     { name: 'MySchema' }
+   export const MySchema = addSchema(
+     Type.Object({...}, { $id: 'MySchema' })
    );
    ```
 
-3. **Replace Type.Ref() with useSchema()**
+3. **Ensure correct registration order**
    ```typescript
-   // Change from:
-   Type.Ref('OutputProjectSchema')
+   // ✅ Register base schemas FIRST
+   export const ItemSchema = addSchema(...);
    
-   // To:
-   useSchema(OutputProjectSchema)
+   // ✅ Register dependent schemas AFTER
+   export const ListSchema = addSchema(
+     Type.Object({
+       items: Type.Array(Type.Ref('ItemSchema'))
+     }, { $id: 'ListSchema' })
+   );
    ```
 
 4. **Remove manual registration**
@@ -285,45 +292,49 @@ export default async function controllers({ useRoute }: AppContext) {
 
 ```typescript
 // project.schemas.ts - COMPLETE MIGRATION
-import { Type, Static, registerSchema, Ref } from '@tsdiapi/server';
+import { Type, Static, addSchema } from '@tsdiapi/server';
 import { OutputProjectSchema } from '@generated/typebox-schemas/models/index.js';
 import { TeamMemberRole } from '@generated/typebox-schemas/enums/index.js';
 import { DateString } from '@tsdiapi/server';
 
 // List schema
-export const OutputUserProjectsListSchema = registerSchema(
+export const OutputUserProjectsListSchema = addSchema(
   Type.Object({
-    projects: Type.Array(useSchema(OutputProjectSchema))
-  }),
-  { name: 'OutputUserProjectsListSchema' }
+    projects: Type.Array(Type.Ref('OutputProjectSchema'))
+  }, {
+    $id: 'OutputUserProjectsListSchema'
+  })
 );
 
 // Input schema
-export const InputCreateProjectSchema = registerSchema(
+export const InputCreateProjectSchema = addSchema(
   Type.Object({
     name: Type.String({ minLength: 1, maxLength: 200 }),
     description: Type.Optional(Type.String({ maxLength: 5000 }))
-  }),
-  { name: 'InputCreateProjectSchema' }
+  }, {
+    $id: 'InputCreateProjectSchema'
+  })
 );
 
-// Base schema
-export const OutputProjectTeamMemberItemSchema = registerSchema(
+// ✅ STEP 1: Base schema - register FIRST
+export const OutputProjectTeamMemberItemSchema = addSchema(
   Type.Object({
     userId: Type.String(),
     email: Type.String(),
     role: TeamMemberRole,
     createdAt: DateString()
-  }),
-  { name: 'OutputProjectTeamMemberItemSchema' }
+  }, {
+    $id: 'OutputProjectTeamMemberItemSchema'
+  })
 );
 
-// Composite schema with dependency
-export const OutputProjectTeamSchema = registerSchema(
+// ✅ STEP 2: Dependent schema - register AFTER base schema
+export const OutputProjectTeamSchema = addSchema(
   Type.Object({
-    members: Type.Array(useSchema(OutputProjectTeamMemberItemSchema))
-  }),
-  { name: 'OutputProjectTeamSchema' }
+    members: Type.Array(Type.Ref('OutputProjectTeamMemberItemSchema'))
+  }, {
+    $id: 'OutputProjectTeamSchema'
+  })
 );
 
 // Types (still work the same)
@@ -366,12 +377,17 @@ export default async function controllers({ useRoute }: AppContext) {
 ## Summary
 
 Migration provides:
-- ✅ **Zero manual $id** - Auto-generated
-- ✅ **Zero manual registration** - Auto-registered
-- ✅ **Duplicate detection** - Prevents conflicts
-- ✅ **Dependency validation** - Catches errors early
+- ✅ **Explicit registration** - Use `addSchema()` - **REQUIRED**
+- ✅ **Order matters!** - Register base schemas before dependent schemas
+- ✅ **No manual registration** - Auto-registered when imported
+- ✅ **Dependency validation** - Order ensures dependencies exist
 - ✅ **Cleaner code** - Less boilerplate
 - ✅ **Type safety** - Full TypeScript support
 
-Migrate gradually - `registerSchema()` is backward compatible with existing schemas!
+**Key Points:**
+- Always use `addSchema()` to register schemas
+- Register base schemas before dependent schemas
+- Use `Type.Ref('SchemaId')` for references
+- Remove all manual `fastify.addSchema()` calls
 
+Migrate gradually - `addSchema()` is backward compatible with existing schemas!

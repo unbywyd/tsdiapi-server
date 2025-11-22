@@ -77,17 +77,22 @@ export const ResponseErrorSchema = Type.Object({
     details: Type.Optional(Type.Any({
         default: null
     }))
-}, {
-    $id: 'ResponseErrorSchema'
-});
+}, { $id: 'ResponseErrorSchema' });
+// Simple success/failure response schemas
+export const ResponseSuccessSchema = Type.Object({
+    success: Type.Literal(true)
+}, { $id: 'ResponseSuccessSchema' });
+export const ResponseFailureSchema = Type.Object({
+    success: Type.Literal(false),
+    error: Type.Optional(Type.String())
+}, { $id: 'ResponseFailureSchema' });
+// Schema will be registered automatically when used in routes
 export const useResponseErrorSchema = (code, schema) => {
     const errorSchema = Type.Object({
         error: Type.String(),
         details: Type.Optional(schema ?? Type.Any({
             default: null
         }))
-    }, {
-        $id: `ResponseErrorSchema_${code}`
     });
     const sendError = (message, details) => {
         return new ResponseError(code, message, details);
@@ -162,9 +167,18 @@ export const responseSuccess = (data) => new Response(data, 200);
 export const response200 = (data) => new Response(data, 200);
 export const response201 = (data) => new Response(data, 201);
 export const response202 = (data) => new Response(data, 202);
-export const response204 = (data) => new Response(data, 204);
+export const response204 = () => new Response(null, 204);
 export const responseNull = () => new Response(null, 204);
 export const responseError = (message, details) => new ResponseError(400, message, details);
+// Simple success/failure helpers
+// Returns { success: true } with status 200
+export const responseOk = () => new Response({ success: true }, 200);
+// Returns { success: false } with status 400
+// Optionally includes error message: { success: false, error: "message" }
+export const responseFail = (error) => {
+    const data = error ? { success: false, error } : { success: false };
+    return new Response(data, 400);
+};
 // Response error with details
 export const response400 = (message, details) => {
     return new ResponseError(400, message, details);
