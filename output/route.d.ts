@@ -131,6 +131,10 @@ export declare class RouteBuilder<Params extends TSchema = TSchema, Body extends
     operationId(id: string): this;
     private generateOperationId;
     auth(type?: "bearer" | "basic" | "apiKey", guard?: GuardFn<TResponses, TState>): this;
+    /**
+     * Validate that schema has $id (required for route schemas)
+     */
+    private requireSchemaId;
     params<T extends TSchema>(schema: T): RouteBuilder<T, Body, Query, Headers, TResponses, TState>;
     body<T extends TSchema>(schema: T): RouteBuilder<Params, T, Query, Headers, TResponses, TState>;
     query<T extends TSchema>(schema: T): RouteBuilder<Params, Body, T, Headers, TResponses, TState>;

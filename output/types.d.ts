@@ -38,6 +38,23 @@ export interface AppOptions<T extends object = Record<string, any>> {
     staticOptions?: AppOptionHandler<FastifyStaticOptions> | FastifyStaticOptions | boolean;
     multipartOptions?: AppOptionHandler<FastifyMultipartAttachFieldsToBodyOptions> | FastifyMultipartAttachFieldsToBodyOptions;
     plugins?: AppPlugin[];
+    /**
+     * Legacy option: Enable automatic schema registration from .schemas.ts files
+     *
+     * @default false - By default, only explicitly registered schemas (via useSchema()) are registered
+     *
+     * When enabled, automatically scans and registers all schemas with $id from .schemas.ts files.
+     * This is a legacy feature for backward compatibility. New projects should use useSchema() explicitly.
+     *
+     * @example
+     * ```typescript
+     * // Enable legacy auto-registration
+     * createApp({
+     *   legacyAutoSchemaRegistration: true
+     * });
+     * ```
+     */
+    legacyAutoSchemaRegistration?: boolean;
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;
     preReady?(ctx: AppContext<T>): Promise<void> | void;

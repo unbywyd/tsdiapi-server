@@ -94,6 +94,8 @@ export const ResponseErrorSchema = Type.Object({
     details: Type.Optional(Type.Any({
         default: null
     }))
+}, {
+    $id: 'ResponseErrorSchema'
 });
 
 
@@ -103,6 +105,8 @@ export const useResponseErrorSchema = <S extends TSchema, Code extends number>(c
         details: Type.Optional(schema ?? Type.Any({
             default: null
         }))
+    }, {
+        $id: `ResponseErrorSchema_${code}`
     });
 
     const sendError = <P extends Static<S>>(message: string, details?: P) => {

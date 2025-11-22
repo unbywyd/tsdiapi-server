@@ -42,6 +42,43 @@ export interface AppOptions<T extends object = Record<string, any>> {
     staticOptions?: AppOptionHandler<FastifyStaticOptions> | FastifyStaticOptions | boolean;
     multipartOptions?: AppOptionHandler<FastifyMultipartAttachFieldsToBodyOptions> | FastifyMultipartAttachFieldsToBodyOptions;
     plugins?: AppPlugin[];
+    /**
+     * Legacy option: Enable automatic schema registration from .schemas.ts files
+     * 
+     * @default false - By default, only explicitly registered schemas (via useSchema()) are registered
+     * 
+     * When enabled, automatically scans and registers all schemas with $id from .schemas.ts files.
+     * This is a legacy feature for backward compatibility. New projects should use useSchema() explicitly.
+     * 
+     * @example
+     * ```typescript
+     * // Enable legacy auto-registration
+     * createApp({
+     *   legacyAutoSchemaRegistration: true
+     * });
+     * ```
+     */
+    legacyAutoSchemaRegistration?: boolean;
+    /**
+     * Require $id property for all schemas used in routes
+     * 
+     * @default true - By default, all schemas must have explicit $id property
+     * 
+     * When true (default), all schemas used in routes (params, body, query, headers, response) must have $id property.
+     * When false, schemas without $id will automatically get unique IDs generated based on route context.
+     * 
+     * @example
+     * ```typescript
+     * // Default: require explicit $id (strict mode)
+     * createApp({}); // requireSchemaId: true by default
+     * 
+     * // Allow auto-generation of $id if missing
+     * createApp({
+     *   requireSchemaId: false
+     * });
+     * ```
+     */
+    requireSchemaId?: boolean;
     onInit?(ctx: AppContext<T>): Promise<void> | void;
     beforeStart?(ctx: AppContext<T>): Promise<void> | void;
     preReady?(ctx: AppContext<T>): Promise<void> | void;

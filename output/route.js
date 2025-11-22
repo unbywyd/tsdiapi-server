@@ -2,6 +2,7 @@ import { Type, } from '@sinclair/typebox';
 import { fileTypeFromBuffer } from 'file-type';
 import { MetaSchemaStorage, metaRouteSchemaStorage } from './meta.js';
 import { ResponseError } from './response.js';
+import { getSchemaRegistry } from './schema-registry.js';
 export function DateString(defaultValue) {
     return Type.String({
         format: 'date-time',
@@ -65,37 +66,41 @@ export class RouteBuilder {
                 // This prevents duplicate registration which can cause server hang
                 return Type.Ref(schemaId);
             }
-            // Register new schema
+            // Try to use schema registry if available
             try {
-                this.fastify.addSchema(schema);
+                const registry = getSchemaRegistry(this.fastify);
+                if (registry.isRegistered(schemaId)) {
+                    RouteBuilder.registeredSchemaIds.add(schemaId);
+                    return Type.Ref(schemaId);
+                }
+                // Register schema in registry (it will handle dependencies)
+                registry.register(schema);
+                registry.resolveAndRegister();
                 RouteBuilder.registeredSchemaIds.add(schemaId);
                 return Type.Ref(schemaId);
             }
-            catch (error) {
-                // Handle potential duplicate registration errors
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                // Check if it's a duplicate schema error
-                if (errorMessage.includes('already exists') ||
-                    errorMessage.includes('duplicate') ||
-                    errorMessage.includes('already registered')) {
-                    console.error(`\n❌ Schema ID Conflict Detected!`);
-                    console.error(`   Schema ID: "${schemaId}"`);
-                    console.error(`   Error: ${errorMessage}\n`);
-                    console.error(`   This error occurs when:`);
-                    console.error(`   1. A schema with $id="${schemaId}" is used with Type.Ref()`);
-                    console.error(`   2. The same schema is used directly (without Type.Ref) in another route\n`);
-                    console.error(`   Solution:`);
-                    console.error(`   - Always use Type.Ref("${schemaId}") when referencing this schema`);
-                    console.error(`   - OR use unique $id values for each schema\n`);
-                    console.error(`   Example:`);
-                    console.error(`   ✅ Good: Type.Ref("${schemaId}")`);
-                    console.error(`   ❌ Bad:  OutputProjectFileWithAssetSchema (direct usage)\n`);
-                    throw new Error(`Duplicate schema ID "${schemaId}" detected. ` +
-                        `This will cause server hang. ` +
-                        `Always use Type.Ref("${schemaId}") or use unique $id values.`);
+            catch (registryError) {
+                // Registry not available or error - fall back to direct registration
+                // This can happen if registry wasn't initialized yet
+                try {
+                    this.fastify.addSchema(schema);
+                    RouteBuilder.registeredSchemaIds.add(schemaId);
+                    return Type.Ref(schemaId);
                 }
-                // Re-throw other errors
-                throw error;
+                catch (regError) {
+                    // Handle potential duplicate registration errors
+                    const errorMessage = regError instanceof Error ? regError.message : String(regError);
+                    // Check if it's a duplicate schema error
+                    if (errorMessage.includes('already exists') ||
+                        errorMessage.includes('duplicate') ||
+                        errorMessage.includes('already registered')) {
+                        // Schema might have been registered by auto-registry or another route
+                        RouteBuilder.registeredSchemaIds.add(schemaId);
+                        return Type.Ref(schemaId);
+                    }
+                    // Re-throw other errors
+                    throw regError;
+                }
             }
         }
         return schema;
@@ -242,7 +247,8 @@ export class RouteBuilder {
     }
     auth(type = "bearer", guard) {
         if (!this.config.schema.headers) {
-            this.config.schema.headers = Type.Object({});
+            const emptyHeadersSchema = Type.Object({}, { $id: 'EmptyHeaders' });
+            this.config.schema.headers = this.withRef(emptyHeadersSchema);
         }
         if (guard) {
             this.guard(guard);
@@ -263,61 +269,150 @@ export class RouteBuilder {
     // --------------------------
     // 3) Schema definition
     // --------------------------
+    /**
+     * Validate that schema has $id (required for route schemas)
+     */
+    requireSchemaId(schema, context) {
+        if (!schema || !schema.$id || typeof schema.$id !== 'string') {
+            const contextInfo = [
+                context.method && `method: ${context.method}`,
+                context.route && `route: ${context.route}`,
+                `type: ${context.type}`
+            ].filter(Boolean).join(', ');
+            // Try to extract schema information for better error message
+            let schemaInfo = 'Unknown schema';
+            try {
+                if (schema && typeof schema === 'object') {
+                    // Try to get schema type or structure info
+                    const schemaType = schema.type || schema[Symbol.for('TypeBox.Kind')] || 'unknown';
+                    const hasProperties = 'properties' in schema;
+                    const hasItems = 'items' in schema;
+                    const hasRef = '$ref' in schema;
+                    const schemaDetails = [];
+                    if (schemaType !== 'unknown')
+                        schemaDetails.push(`type: ${schemaType}`);
+                    if (hasProperties)
+                        schemaDetails.push('has properties');
+                    if (hasItems)
+                        schemaDetails.push('has items');
+                    if (hasRef)
+                        schemaDetails.push(`ref: ${schema.$ref}`);
+                    schemaInfo = schemaDetails.length > 0
+                        ? `Schema(${schemaDetails.join(', ')})`
+                        : 'Schema object';
+                    // Try to get schema structure preview (first level only)
+                    if (hasProperties && schema.properties) {
+                        const propKeys = Object.keys(schema.properties).slice(0, 5);
+                        if (propKeys.length > 0) {
+                            schemaInfo += ` with fields: ${propKeys.join(', ')}${Object.keys(schema.properties).length > 5 ? '...' : ''}`;
+                        }
+                    }
+                }
+            }
+            catch {
+                // Ignore errors when extracting schema info
+            }
+            throw new Error(`Schema used in route must have $id property.\n` +
+                `Context: ${contextInfo}\n` +
+                `Schema: ${schemaInfo}\n\n` +
+                `Solution:\n` +
+                `1. Use useSchema() to register schema with $id:\n` +
+                `   export const MySchema = useSchema(Type.Object({...}), 'MySchema');\n\n` +
+                `2. Or add $id directly:\n` +
+                `   Type.Object({...}, { $id: 'MySchema' })\n\n` +
+                `3. Then use in route:\n` +
+                `   .${context.type}(MySchema)`);
+        }
+        return schema;
+    }
     params(schema) {
+        // Require $id for route schemas
+        const validatedSchema = this.requireSchemaId(schema, {
+            type: 'params',
+            method: this.config.method,
+            route: this.config.url
+        });
         this.extraMetaStorage.add({
             type: 'params',
-            schema: schema,
-            id: schema.$id || undefined
+            schema: validatedSchema,
+            id: validatedSchema.$id
         });
-        this.config.schema.params = this.withRef(schema);
+        this.config.schema.params = this.withRef(validatedSchema);
         return this;
     }
     body(schema) {
+        // Require $id for route schemas
+        const validatedSchema = this.requireSchemaId(schema, {
+            type: 'body',
+            method: this.config.method,
+            route: this.config.url
+        });
         this.extraMetaStorage.add({
             type: 'body',
-            schema: schema,
-            id: schema.$id || undefined
+            schema: validatedSchema,
+            id: validatedSchema.$id
         });
-        this.config.schema.body = this.withRef(schema);
+        this.config.schema.body = this.withRef(validatedSchema);
         return this;
     }
     query(schema) {
+        // Require $id for route schemas
+        const validatedSchema = this.requireSchemaId(schema, {
+            type: 'query',
+            method: this.config.method,
+            route: this.config.url
+        });
         this.extraMetaStorage.add({
             type: 'query',
-            schema: schema,
-            id: schema.$id || undefined
+            schema: validatedSchema,
+            id: validatedSchema.$id
         });
-        this.config.schema.querystring = this.withRef(schema);
+        this.config.schema.querystring = this.withRef(validatedSchema);
         return this;
     }
     headers(schema) {
+        // Require $id for route schemas
+        const validatedSchema = this.requireSchemaId(schema, {
+            type: 'headers',
+            method: this.config.method,
+            route: this.config.url
+        });
         this.extraMetaStorage.add({
             type: 'headers',
-            schema: schema,
-            id: schema.$id || undefined
+            schema: validatedSchema,
+            id: validatedSchema.$id
         });
-        this.config.schema.headers = this.withRef(schema);
+        this.config.schema.headers = this.withRef(validatedSchema);
         return this;
     }
     code(code, schema) {
         if (code === 204) {
-            return this.codes({ [code]: Type.Object({}) });
+            return this.codes({ [code]: Type.Object({}, { $id: 'EmptyResponse204' }) });
         }
         return this.codes({ [code]: schema });
     }
     codes(responses) {
         for (const [code, schema] of Object.entries(responses)) {
             const statusCode = Number(code);
+            // Require $id for response schemas
+            const validatedSchema = this.requireSchemaId(schema, {
+                type: 'response',
+                method: this.config.method,
+                route: this.config.url
+            });
             this.extraMetaStorage.add({
                 type: 'response',
                 statusCode,
-                schema,
-                id: schema.$id || undefined
+                schema: validatedSchema,
+                id: validatedSchema.$id
             });
-            this.config.schema.response[statusCode] = Type.Object({
+            const responseWrapperSchema = Type.Object({
                 status: Type.Literal(statusCode),
-                data: this.withRef(schema)
+                data: this.withRef(validatedSchema)
+            }, {
+                $id: `RouteResponse_${this.config.method}_${statusCode}_${validatedSchema.$id}`
             });
+            this.config.schema.response[statusCode] = this.withRef(responseWrapperSchema);
         }
         return this;
     }

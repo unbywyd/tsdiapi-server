@@ -26,6 +26,8 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
 import { getSyncQueueProvider } from "@tsdiapi/syncqueue";
 import { createRequestContextHook, createRequestContextCleanupHook } from './request-context.js';
+import { autoRegisterSchemas, getSchemaRegistry } from './schema-registry.js';
+import { ResponseErrorSchema } from './response.js';
 
 // Package version - exported for API versioning
 export const VERSION = '0.3.5';
@@ -36,6 +38,9 @@ export * from './route.js';
 export * from './meta.js';
 export * from './response.js';
 export * from './request-context.js';
+export * from './schema-registry.js';
+export { useSchema } from './schema-registry.js';
+export type { RegisterSchemaOptions } from './schema-registry.js';
 
 let context: AppContext | null = null;
 export function getContext(): AppContext | null {
@@ -102,6 +107,17 @@ export async function createApp<T extends object = Record<string, any>>(options:
         setContext(context);
         if (options.fileLoader) {
             context.fileLoader = options.fileLoader;
+        }
+
+        // Initialize schema registry and register framework schemas
+        try {
+            const registry = getSchemaRegistry(fastify);
+            if (!registry.isRegistered('ResponseErrorSchema')) {
+                registry.register(ResponseErrorSchema);
+                registry.resolveAndRegister();
+            }
+        } catch {
+            // If registry not available, schema will be registered when used via withRef()
         }
 
         const pendingBuilds: Array<Promise<void>> = [];
@@ -224,6 +240,14 @@ export async function createApp<T extends object = Record<string, any>>(options:
         const apiRelativePath = removeTrailingSlash(path.relative(context.appDir, apiDir));
 
         await ensureDir(apiDir);
+        
+        // Auto-register schemas only if legacy option is enabled
+        // By default, only explicitly registered schemas (via useSchema()) are used
+        if (options.legacyAutoSchemaRegistration === true) {
+            console.log(cristal('⚠️  Legacy auto schema registration is enabled'));
+            await autoRegisterSchemas(fastify, apiDir);
+        }
+        
         await fileLoader(makeLoadPath(apiRelativePath, 'service'), context.appDir);
 
 

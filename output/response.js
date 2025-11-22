@@ -77,6 +77,8 @@ export const ResponseErrorSchema = Type.Object({
     details: Type.Optional(Type.Any({
         default: null
     }))
+}, {
+    $id: 'ResponseErrorSchema'
 });
 export const useResponseErrorSchema = (code, schema) => {
     const errorSchema = Type.Object({
@@ -84,6 +86,8 @@ export const useResponseErrorSchema = (code, schema) => {
         details: Type.Optional(schema ?? Type.Any({
             default: null
         }))
+    }, {
+        $id: `ResponseErrorSchema_${code}`
     });
     const sendError = (message, details) => {
         return new ResponseError(code, message, details);
